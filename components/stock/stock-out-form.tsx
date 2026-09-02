@@ -4,7 +4,6 @@ import { useState, useTransition } from "react";
 import { TypeAheadSearch } from "@/components/shared/type-ahead-search";
 import { createClient } from "@/lib/supabase/client";
 import { createStockOut } from "@/app/(app)/stock/out/actions";
-import { sortBatchesFefo, suggestBatch, type FefoBatch } from "@/lib/stock/fefo";
 import { formatQuantity } from "@/lib/units";
 import { KeyboardNumberInput } from "@/components/keyboard/keyboard-number-input";
 
@@ -13,7 +12,6 @@ interface ItemOption {
   code: string;
   name: string;
   base_unit: string;
-  batch_tracked: boolean;
   units: { unit_name: string; conversion_factor_to_base: number }[];
 }
 
@@ -21,21 +19,16 @@ function todayIso(): string {
   return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Colombo" });
 }
 
-function batchLabel(batch: FefoBatch, baseUnit: string): string {
-  const parts = [batch.batch_number ?? "No batch #"];
-  if (batch.expiry_date) parts.push(`exp ${batch.expiry_date}`);
-  parts.push(`${formatQuantity(batch.quantity_remaining)} ${baseUnit} left`);
-  return parts.join(" · ");
-}
-
+// Batch selection is fully automatic (server-side FEFO in create_stock_out) --
+// this form only needs the item's total on-hand quantity to show the running
+// total and drive the over-quantity warning, not the individual batches.
 export function StockOutForm({ items }: { items: ItemOption[] }) {
   const [item, setItem] = useState<ItemOption | null>(null);
-  const [batches, setBatches] = useState<FefoBatch[]>([]);
-  const [batchId, setBatchId] = useState("");
+  const [totalAvailable, setTotalAvailable] = useState(0);
+  const [loadingTotal, setLoadingTotal] = useState(false);
   const [quantity, setQuantity] = useState("");
   const [unitName, setUnitName] = useState("");
   const [date, setDate] = useState(todayIso());
-  const [loadingBatches, setLoadingBatches] = useState(false);
   const [needsConfirm, setNeedsConfirm] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -48,36 +41,33 @@ export function StockOutForm({ items }: { items: ItemOption[] }) {
     setError(null);
     setSuccess(false);
     setNeedsConfirm(false);
-    setLoadingBatches(true);
+    setLoadingTotal(true);
 
     const supabase = createClient();
     const { data } = await supabase
-      .from("stock_batches")
-      .select("id, batch_number, expiry_date, quantity_remaining, created_at")
-      .eq("item_id", next.id);
+      .from("item_stock_summary")
+      .select("total_quantity")
+      .eq("item_id", next.id)
+      .maybeSingle();
 
-    const sorted = sortBatchesFefo(data ?? []);
-    setBatches(sorted);
-    setBatchId(suggestBatch(sorted)?.id ?? "");
-    setLoadingBatches(false);
+    setTotalAvailable(data?.total_quantity ?? 0);
+    setLoadingTotal(false);
   }
 
   function reset() {
     setItem(null);
-    setBatches([]);
-    setBatchId("");
+    setTotalAvailable(0);
     setQuantity("");
     setNeedsConfirm(false);
   }
 
-  const totalAvailable = batches.reduce((sum, b) => sum + b.quantity_remaining, 0);
   const unitOptions = item ? [{ unit_name: item.base_unit, conversion_factor_to_base: 1 }, ...item.units] : [];
   const factor = unitOptions.find((u) => u.unit_name === unitName)?.conversion_factor_to_base ?? 1;
   const requestedBaseQty = (Number(quantity) || 0) * factor;
   const overAvailable = requestedBaseQty > totalAvailable;
 
   function submit() {
-    if (!item || !batchId) return;
+    if (!item) return;
     if (overAvailable && !needsConfirm) {
       setNeedsConfirm(true);
       return;
@@ -86,7 +76,6 @@ export function StockOutForm({ items }: { items: ItemOption[] }) {
     startTransition(async () => {
       const result = await createStockOut({
         item_id: item.id,
-        stock_batch_id: batchId,
         quantity: Number(quantity) || 0,
         unit_name: unitName,
         date,
@@ -136,11 +125,11 @@ export function StockOutForm({ items }: { items: ItemOption[] }) {
         )}
       </div>
 
-      {item && loadingBatches && <p className="text-sm text-muted">Loading stock...</p>}
+      {item && loadingTotal && <p className="text-sm text-muted">Loading stock...</p>}
 
-      {item && !loadingBatches && (
+      {item && !loadingTotal && (
         <>
-          {batches.length === 0 ? (
+          {totalAvailable <= 0 ? (
             <p className="rounded-lg bg-warning-surface px-3 py-2 text-sm text-warning">
               No stock on hand for this item yet.
             </p>
@@ -149,25 +138,6 @@ export function StockOutForm({ items }: { items: ItemOption[] }) {
               <p className="text-sm text-muted">
                 Total on hand: {formatQuantity(totalAvailable)} {item.base_unit}
               </p>
-
-              {item.batch_tracked && (
-                <div>
-                  <label className="mb-1.5 block text-sm font-medium text-foreground">
-                    Batch (earliest expiry suggested first)
-                  </label>
-                  <select
-                    value={batchId}
-                    onChange={(e) => setBatchId(e.target.value)}
-                    className="w-full rounded-lg border border-border bg-surface px-4 py-3 text-base text-foreground focus:border-primary focus:outline-none"
-                  >
-                    {batches.map((b) => (
-                      <option key={b.id} value={b.id}>
-                        {batchLabel(b, item.base_unit)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div>

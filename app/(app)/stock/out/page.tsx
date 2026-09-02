@@ -8,7 +8,7 @@ export default async function StockOutPage() {
 
   const { data: itemsData } = await supabase
     .from("items")
-    .select("id, code, name, base_unit, batch_tracked, item_units(unit_name, conversion_factor_to_base)")
+    .select("id, code, name, base_unit, item_units(unit_name, conversion_factor_to_base)")
     .eq("active", true)
     .order("name");
 
@@ -17,7 +17,6 @@ export default async function StockOutPage() {
     code: item.code,
     name: item.name,
     base_unit: item.base_unit,
-    batch_tracked: item.batch_tracked,
     units: item.item_units,
   }));
 

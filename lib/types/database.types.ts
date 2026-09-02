@@ -610,7 +610,6 @@ export type Database = {
           id: string
           item_id: string
           quantity: number
-          stock_batch_id: string
           unit_name: string
         }
         Insert: {
@@ -622,7 +621,6 @@ export type Database = {
           id?: string
           item_id: string
           quantity: number
-          stock_batch_id: string
           unit_name: string
         }
         Update: {
@@ -634,7 +632,6 @@ export type Database = {
           id?: string
           item_id?: string
           quantity?: number
-          stock_batch_id?: string
           unit_name?: string
         }
         Relationships: [
@@ -652,11 +649,43 @@ export type Database = {
             referencedRelation: "items"
             referencedColumns: ["id"]
           },
+        ]
+      }
+      stock_out_batches: {
+        Row: {
+          created_at: string
+          id: string
+          quantity_deducted: number
+          stock_batch_id: string
+          stock_out_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          quantity_deducted: number
+          stock_batch_id: string
+          stock_out_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          quantity_deducted?: number
+          stock_batch_id?: string
+          stock_out_id?: string
+        }
+        Relationships: [
           {
-            foreignKeyName: "stock_out_stock_batch_id_fkey"
+            foreignKeyName: "stock_out_batches_stock_batch_id_fkey"
             columns: ["stock_batch_id"]
             isOneToOne: false
             referencedRelation: "stock_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_out_batches_stock_out_id_fkey"
+            columns: ["stock_out_id"]
+            isOneToOne: false
+            referencedRelation: "stock_out"
             referencedColumns: ["id"]
           },
         ]
@@ -858,7 +887,6 @@ export type Database = {
           p_date: string
           p_item_id: string
           p_quantity: number
-          p_stock_batch_id: string
           p_unit_name: string
         }
         Returns: string
@@ -951,12 +979,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -980,11 +1008,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1005,11 +1033,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1030,11 +1058,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1047,11 +1075,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
