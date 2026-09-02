@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { KeyboardTextInput } from "@/components/keyboard/keyboard-text-input";
 
 interface TypeAheadSearchProps<T> {
   items: T[];
@@ -44,13 +45,12 @@ export function TypeAheadSearch<T>({
 
   return (
     <div className="relative w-full">
-      <input
-        type="text"
+      <KeyboardTextInput
         value={query}
         disabled={disabled}
         autoFocus={autoFocus}
-        onChange={(e) => {
-          setQuery(e.target.value);
+        onChange={(v) => {
+          setQuery(v);
           setOpen(true);
         }}
         onFocus={() => setOpen(true)}

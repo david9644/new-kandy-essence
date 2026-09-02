@@ -2,6 +2,8 @@
 
 import { useState, useTransition } from "react";
 import type { ItemInput, UnitInput } from "@/app/(app)/items/actions";
+import { KeyboardTextInput } from "@/components/keyboard/keyboard-text-input";
+import { KeyboardNumberInput } from "@/components/keyboard/keyboard-number-input";
 
 interface Category {
   id: string;
@@ -74,9 +76,9 @@ export function ItemForm({ categories, initial, onSubmit, submitLabel }: ItemFor
 
       <div>
         <label className="mb-1.5 block text-sm font-medium text-foreground">Item Name</label>
-        <input
+        <KeyboardTextInput
           value={name}
-          onChange={(e) => setName(e.target.value)}
+          onChange={setName}
           required
           className="w-full rounded-lg border border-border bg-surface px-4 py-3 text-base text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
         />
@@ -104,9 +106,9 @@ export function ItemForm({ categories, initial, onSubmit, submitLabel }: ItemFor
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="mb-1.5 block text-sm font-medium text-foreground">Base Unit</label>
-          <input
+          <KeyboardTextInput
             value={baseUnit}
-            onChange={(e) => setBaseUnit(e.target.value)}
+            onChange={setBaseUnit}
             placeholder="e.g. piece, kg"
             required
             className="w-full rounded-lg border border-border bg-surface px-4 py-3 text-base text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
@@ -116,13 +118,9 @@ export function ItemForm({ categories, initial, onSubmit, submitLabel }: ItemFor
           <label className="mb-1.5 block text-sm font-medium text-foreground">
             Reorder Level
           </label>
-          <input
-            type="text"
-            inputMode="decimal"
+          <KeyboardNumberInput
             value={reorderLevel}
-            onChange={(e) => {
-              if (/^\d*\.?\d*$/.test(e.target.value)) setReorderLevel(e.target.value);
-            }}
+            onChange={setReorderLevel}
             className="w-full rounded-lg border border-border bg-surface px-4 py-3 text-base text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
         </div>
@@ -154,23 +152,20 @@ export function ItemForm({ categories, initial, onSubmit, submitLabel }: ItemFor
         <div className="flex flex-col gap-2">
           {units.map((unit, i) => (
             <div key={i} className="flex items-center gap-2">
-              <input
+              <KeyboardTextInput
                 value={unit.unit_name}
-                onChange={(e) => updateUnitRow(i, { unit_name: e.target.value })}
+                onChange={(v) => updateUnitRow(i, { unit_name: v })}
                 placeholder="e.g. box"
                 className="flex-1 rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none"
               />
               <span className="text-sm text-muted">=</span>
-              <input
-                type="text"
-                inputMode="decimal"
-                value={unit.conversion_factor_to_base}
-                onChange={(e) => {
-                  if (/^\d*\.?\d*$/.test(e.target.value))
-                    updateUnitRow(i, {
-                      conversion_factor_to_base: e.target.value === "" ? 0 : Number(e.target.value),
-                    });
-                }}
+              <KeyboardNumberInput
+                value={String(unit.conversion_factor_to_base)}
+                onChange={(v) =>
+                  updateUnitRow(i, {
+                    conversion_factor_to_base: v === "" ? 0 : Number(v),
+                  })
+                }
                 className="w-20 rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none"
               />
               <span className="text-sm text-muted">{baseUnit || "base"}</span>

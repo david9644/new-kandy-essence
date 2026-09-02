@@ -2,6 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { updatePurchaseHeader } from "@/app/(app)/purchases/actions";
+import { KeyboardTextInput } from "@/components/keyboard/keyboard-text-input";
+import { KeyboardTextArea } from "@/components/keyboard/keyboard-textarea";
 
 export function PurchaseHeaderEditForm({
   purchaseId,
@@ -44,18 +46,18 @@ export function PurchaseHeaderEditForm({
         </div>
         <div>
           <label className="mb-1 block text-xs font-medium text-muted">Reference No.</label>
-          <input
+          <KeyboardTextInput
             value={referenceNo}
-            onChange={(e) => setReferenceNo(e.target.value)}
+            onChange={setReferenceNo}
             className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none"
           />
         </div>
       </div>
       <div>
         <label className="mb-1 block text-xs font-medium text-muted">Notes</label>
-        <textarea
+        <KeyboardTextArea
           value={notes}
-          onChange={(e) => setNotes(e.target.value)}
+          onChange={setNotes}
           rows={2}
           className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none"
         />

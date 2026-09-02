@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { formatCurrency } from "@/lib/units";
+import { KeyboardTextInput } from "@/components/keyboard/keyboard-text-input";
 
 export interface SupplierRow {
   id: string;
@@ -31,9 +32,9 @@ export function SuppliersTable({
 
   return (
     <div>
-      <input
+      <KeyboardTextInput
         value={query}
-        onChange={(e) => setQuery(e.target.value)}
+        onChange={setQuery}
         placeholder="Search by name or code..."
         className="mb-4 w-full rounded-lg border border-border bg-surface px-4 py-3 text-base text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
       />

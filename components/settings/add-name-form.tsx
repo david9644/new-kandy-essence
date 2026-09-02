@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { KeyboardTextInput } from "@/components/keyboard/keyboard-text-input";
 
 export function AddNameForm({
   placeholder,
@@ -34,9 +35,9 @@ export function AddNameForm({
   return (
     <form onSubmit={handleSubmit} className="flex items-start gap-2">
       <div className="flex-1">
-        <input
+        <KeyboardTextInput
           value={name}
-          onChange={(e) => setName(e.target.value)}
+          onChange={setName}
           placeholder={placeholder}
           className="w-full rounded-lg border border-border bg-surface px-4 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
         />

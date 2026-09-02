@@ -5,6 +5,8 @@ import { TypeAheadSearch } from "@/components/shared/type-ahead-search";
 import { createClient } from "@/lib/supabase/client";
 import { createStockAdjustment } from "@/app/(app)/stock/adjustments/actions";
 import { formatQuantity } from "@/lib/units";
+import { KeyboardNumberInput } from "@/components/keyboard/keyboard-number-input";
+import { KeyboardTextArea } from "@/components/keyboard/keyboard-textarea";
 
 interface ItemOption {
   id: string;
@@ -176,13 +178,9 @@ export function StockAdjustmentForm({ items }: { items: ItemOption[] }) {
                 Decrease (damage/loss)
               </button>
             </div>
-            <input
-              type="text"
-              inputMode="decimal"
+            <KeyboardNumberInput
               value={amount}
-              onChange={(e) => {
-                if (/^\d*\.?\d*$/.test(e.target.value)) setAmount(e.target.value);
-              }}
+              onChange={setAmount}
               placeholder={`Quantity in ${item.base_unit}`}
               className="w-full rounded-lg border border-border bg-surface px-4 py-3 text-right text-xl font-semibold tabular-nums text-foreground focus:border-primary focus:outline-none"
             />
@@ -190,9 +188,9 @@ export function StockAdjustmentForm({ items }: { items: ItemOption[] }) {
 
           <div>
             <label className="mb-1.5 block text-sm font-medium text-foreground">Reason</label>
-            <textarea
+            <KeyboardTextArea
               value={reason}
-              onChange={(e) => setReason(e.target.value)}
+              onChange={setReason}
               rows={2}
               required
               placeholder="e.g. damaged during handling, miscount during transition"

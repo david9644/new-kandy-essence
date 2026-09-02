@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { setUserActive, resetUserPin } from "@/app/(app)/users/actions";
+import { KeyboardNumberInput } from "@/components/keyboard/keyboard-number-input";
 
 interface UserRowProps {
   id: string;
@@ -62,13 +63,11 @@ export function UserRow({ id, fullName, role, active, isSelf }: UserRowProps) {
 
       {resetting && (
         <div className="flex items-center gap-2">
-          <input
-            type="text"
-            inputMode="numeric"
+          <KeyboardNumberInput
             value={newPin}
-            onChange={(e) => {
-              if (/^\d{0,6}$/.test(e.target.value)) setNewPin(e.target.value);
-            }}
+            onChange={setNewPin}
+            allowDecimal={false}
+            maxLength={6}
             placeholder="New 4-6 digit PIN"
             className="h-10 flex-1 rounded-lg border border-border bg-background px-3 text-sm tabular-nums text-foreground focus:border-primary focus:outline-none"
           />

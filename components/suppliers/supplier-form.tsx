@@ -2,6 +2,9 @@
 
 import { useState, useTransition } from "react";
 import type { SupplierInput } from "@/app/(app)/suppliers/actions";
+import { KeyboardTextInput } from "@/components/keyboard/keyboard-text-input";
+import { KeyboardTextArea } from "@/components/keyboard/keyboard-textarea";
+import { KeyboardNumberInput } from "@/components/keyboard/keyboard-number-input";
 
 interface SupplierFormProps {
   initial?: SupplierInput;
@@ -51,9 +54,9 @@ export function SupplierForm({
 
       <div>
         <label className="mb-1.5 block text-sm font-medium text-foreground">Supplier Name</label>
-        <input
+        <KeyboardTextInput
           value={name}
-          onChange={(e) => setName(e.target.value)}
+          onChange={setName}
           required
           className="w-full rounded-lg border border-border bg-surface px-4 py-3 text-base text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
         />
@@ -61,18 +64,18 @@ export function SupplierForm({
 
       <div>
         <label className="mb-1.5 block text-sm font-medium text-foreground">Contact Number</label>
-        <input
+        <KeyboardTextInput
           value={contact}
-          onChange={(e) => setContact(e.target.value)}
+          onChange={setContact}
           className="w-full rounded-lg border border-border bg-surface px-4 py-3 text-base text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
         />
       </div>
 
       <div>
         <label className="mb-1.5 block text-sm font-medium text-foreground">Address</label>
-        <textarea
+        <KeyboardTextArea
           value={address}
-          onChange={(e) => setAddress(e.target.value)}
+          onChange={setAddress}
           rows={2}
           className="w-full rounded-lg border border-border bg-surface px-4 py-3 text-base text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
         />
@@ -82,14 +85,10 @@ export function SupplierForm({
         <label className="mb-1.5 block text-sm font-medium text-foreground">
           Opening Balance
         </label>
-        <input
-          type="text"
-          inputMode="decimal"
+        <KeyboardNumberInput
           value={openingBalance}
           disabled={lockOpeningBalance}
-          onChange={(e) => {
-            if (/^-?\d*\.?\d*$/.test(e.target.value)) setOpeningBalance(e.target.value);
-          }}
+          onChange={setOpeningBalance}
           className="w-full rounded-lg border border-border bg-surface px-4 py-3 text-base text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
         />
         <p className="mt-1 text-xs text-muted">

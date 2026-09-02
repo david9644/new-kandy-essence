@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { createStockOut } from "@/app/(app)/stock/out/actions";
 import { sortBatchesFefo, suggestBatch, type FefoBatch } from "@/lib/stock/fefo";
 import { formatQuantity } from "@/lib/units";
+import { KeyboardNumberInput } from "@/components/keyboard/keyboard-number-input";
 
 interface ItemOption {
   id: string;
@@ -173,15 +174,11 @@ export function StockOutForm({ items }: { items: ItemOption[] }) {
                   <label className="mb-1.5 block text-sm font-medium text-foreground">
                     Quantity
                   </label>
-                  <input
-                    type="text"
-                    inputMode="decimal"
+                  <KeyboardNumberInput
                     value={quantity}
-                    onChange={(e) => {
-                      if (/^\d*\.?\d*$/.test(e.target.value)) {
-                        setQuantity(e.target.value);
-                        setNeedsConfirm(false);
-                      }
+                    onChange={(v) => {
+                      setQuantity(v);
+                      setNeedsConfirm(false);
                     }}
                     className="w-full rounded-lg border border-border bg-surface px-4 py-3 text-right text-xl font-semibold tabular-nums text-foreground focus:border-primary focus:outline-none"
                   />

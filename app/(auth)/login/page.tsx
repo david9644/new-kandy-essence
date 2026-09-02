@@ -1,16 +1,16 @@
 "use client";
 
 import { useState } from "react";
+import { NumericKeypad, type NumericKey } from "@/components/NumericKeypad";
 
 const MAX_PIN_LENGTH = 6;
-const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "clear", "0", "back"];
 
 export default function LoginPage() {
   const [pin, setPin] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  function press(key: string) {
+  function press(key: NumericKey) {
     if (submitting) return;
     setError(null);
     if (key === "back") {
@@ -77,19 +77,7 @@ export default function LoginPage() {
           </p>
         )}
 
-        <div className="grid grid-cols-3 gap-3">
-          {KEYS.map((key) => (
-            <button
-              key={key}
-              type="button"
-              disabled={submitting}
-              onClick={() => press(key)}
-              className="flex h-16 items-center justify-center rounded-xl border border-border bg-surface text-2xl font-medium text-foreground active:bg-background disabled:opacity-50"
-            >
-              {key === "back" ? "⌫" : key === "clear" ? "C" : key}
-            </button>
-          ))}
-        </div>
+        <NumericKeypad onKey={press} allowDecimal={false} disabled={submitting} large />
 
         <button
           type="button"

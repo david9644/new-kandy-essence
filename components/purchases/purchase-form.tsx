@@ -6,6 +6,8 @@ import { PurchaseLineRow, emptyLine, lineTotal, type ItemOption, type LineState 
 import { ChequeFields, type BankAccountOption } from "./cheque-fields";
 import { createPurchase } from "@/app/(app)/purchases/actions";
 import { formatCurrency } from "@/lib/units";
+import { KeyboardTextInput } from "@/components/keyboard/keyboard-text-input";
+import { KeyboardTextArea } from "@/components/keyboard/keyboard-textarea";
 import type { Database } from "@/lib/types/database.types";
 
 type PaymentType = Database["public"]["Enums"]["purchase_payment_type"];
@@ -148,9 +150,9 @@ export function PurchaseForm({
           <label className="mb-1.5 block text-sm font-medium text-foreground">
             Reference / Invoice No.
           </label>
-          <input
+          <KeyboardTextInput
             value={referenceNo}
-            onChange={(e) => setReferenceNo(e.target.value)}
+            onChange={setReferenceNo}
             className="w-full rounded-lg border border-border bg-surface px-4 py-3 text-base text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
         </div>
@@ -206,9 +208,9 @@ export function PurchaseForm({
 
       <div>
         <label className="mb-1.5 block text-sm font-medium text-foreground">Notes</label>
-        <textarea
+        <KeyboardTextArea
           value={notes}
-          onChange={(e) => setNotes(e.target.value)}
+          onChange={setNotes}
           rows={2}
           className="w-full rounded-lg border border-border bg-surface px-4 py-3 text-base text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
         />

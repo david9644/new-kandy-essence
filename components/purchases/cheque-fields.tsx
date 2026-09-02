@@ -1,6 +1,8 @@
 "use client";
 
 import type { ChequeInput } from "@/app/(app)/purchases/actions";
+import { KeyboardTextInput } from "@/components/keyboard/keyboard-text-input";
+import { KeyboardNumberInput } from "@/components/keyboard/keyboard-number-input";
 
 export interface BankAccountOption {
   id: string;
@@ -36,9 +38,9 @@ export function ChequeFields({
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="mb-1 block text-xs font-medium text-muted">Cheque Number</label>
-          <input
+          <KeyboardTextInput
             value={value.cheque_number}
-            onChange={(e) => onChange({ ...value, cheque_number: e.target.value })}
+            onChange={(v) => onChange({ ...value, cheque_number: v })}
             className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none"
           />
         </div>
@@ -54,14 +56,9 @@ export function ChequeFields({
       </div>
       <div>
         <label className="mb-1 block text-xs font-medium text-muted">Cheque Amount</label>
-        <input
-          type="text"
-          inputMode="decimal"
-          value={value.amount || ""}
-          onChange={(e) => {
-            if (/^\d*\.?\d*$/.test(e.target.value))
-              onChange({ ...value, amount: e.target.value === "" ? 0 : Number(e.target.value) });
-          }}
+        <KeyboardNumberInput
+          value={value.amount ? String(value.amount) : ""}
+          onChange={(v) => onChange({ ...value, amount: v === "" ? 0 : Number(v) })}
           className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm tabular-nums text-foreground focus:border-primary focus:outline-none"
         />
       </div>

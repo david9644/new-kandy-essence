@@ -4,6 +4,8 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createUser } from "@/app/(app)/users/actions";
 import type { Database } from "@/lib/types/database.types";
+import { KeyboardTextInput } from "@/components/keyboard/keyboard-text-input";
+import { KeyboardNumberInput } from "@/components/keyboard/keyboard-number-input";
 
 type Role = Database["public"]["Enums"]["user_role"];
 
@@ -41,9 +43,9 @@ export function CreateUserForm() {
       )}
       <div>
         <label className="mb-1.5 block text-sm font-medium text-foreground">Name</label>
-        <input
+        <KeyboardTextInput
           value={fullName}
-          onChange={(e) => setFullName(e.target.value)}
+          onChange={setFullName}
           required
           className="w-full rounded-lg border border-border bg-background px-4 py-3 text-base text-foreground focus:border-primary focus:outline-none"
         />
@@ -69,13 +71,11 @@ export function CreateUserForm() {
       </div>
       <div>
         <label className="mb-1.5 block text-sm font-medium text-foreground">PIN (4-6 digits)</label>
-        <input
-          type="text"
-          inputMode="numeric"
+        <KeyboardNumberInput
           value={pin}
-          onChange={(e) => {
-            if (/^\d{0,6}$/.test(e.target.value)) setPin(e.target.value);
-          }}
+          onChange={setPin}
+          allowDecimal={false}
+          maxLength={6}
           required
           className="w-full rounded-lg border border-border bg-background px-4 py-3 text-base tabular-nums text-foreground focus:border-primary focus:outline-none"
         />

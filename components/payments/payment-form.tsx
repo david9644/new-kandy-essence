@@ -5,6 +5,8 @@ import { TypeAheadSearch } from "@/components/shared/type-ahead-search";
 import { ChequeFields, type BankAccountOption } from "@/components/purchases/cheque-fields";
 import { createSupplierPayment } from "@/app/(app)/payments/actions";
 import type { Database } from "@/lib/types/database.types";
+import { KeyboardNumberInput } from "@/components/keyboard/keyboard-number-input";
+import { KeyboardTextArea } from "@/components/keyboard/keyboard-textarea";
 
 type PaymentMethod = Database["public"]["Enums"]["payment_method"];
 
@@ -123,13 +125,9 @@ export function PaymentForm({
         </div>
         <div>
           <label className="mb-1.5 block text-sm font-medium text-foreground">Amount</label>
-          <input
-            type="text"
-            inputMode="decimal"
+          <KeyboardNumberInput
             value={amount}
-            onChange={(e) => {
-              if (/^\d*\.?\d*$/.test(e.target.value)) setAmount(e.target.value);
-            }}
+            onChange={setAmount}
             className="w-full rounded-lg border border-border bg-surface px-4 py-3 text-right text-base tabular-nums text-foreground focus:border-primary focus:outline-none"
           />
         </div>
@@ -161,9 +159,9 @@ export function PaymentForm({
 
       <div>
         <label className="mb-1.5 block text-sm font-medium text-foreground">Notes</label>
-        <textarea
+        <KeyboardTextArea
           value={notes}
-          onChange={(e) => setNotes(e.target.value)}
+          onChange={setNotes}
           rows={2}
           className="w-full rounded-lg border border-border bg-surface px-4 py-3 text-base text-foreground focus:border-primary focus:outline-none"
         />

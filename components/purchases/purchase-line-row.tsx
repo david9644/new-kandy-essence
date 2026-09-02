@@ -2,6 +2,8 @@
 
 import { TypeAheadSearch } from "@/components/shared/type-ahead-search";
 import { formatCurrency } from "@/lib/units";
+import { KeyboardTextInput } from "@/components/keyboard/keyboard-text-input";
+import { KeyboardNumberInput } from "@/components/keyboard/keyboard-number-input";
 
 export interface ItemOption {
   id: string;
@@ -93,9 +95,9 @@ export function PurchaseLineRow({
         <div className="mb-3 grid grid-cols-2 gap-2">
           <div>
             <label className="mb-1 block text-xs font-medium text-muted">Batch Number</label>
-            <input
+            <KeyboardTextInput
               value={line.batchNumber}
-              onChange={(e) => onChange({ ...line, batchNumber: e.target.value })}
+              onChange={(v) => onChange({ ...line, batchNumber: v })}
               className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none"
             />
           </div>
@@ -114,13 +116,9 @@ export function PurchaseLineRow({
       <div className="grid grid-cols-3 gap-2">
         <div>
           <label className="mb-1 block text-xs font-medium text-muted">Quantity</label>
-          <input
-            type="text"
-            inputMode="decimal"
+          <KeyboardNumberInput
             value={line.quantity}
-            onChange={(e) => {
-              if (/^\d*\.?\d*$/.test(e.target.value)) onChange({ ...line, quantity: e.target.value });
-            }}
+            onChange={(v) => onChange({ ...line, quantity: v })}
             className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-right text-sm tabular-nums text-foreground focus:border-primary focus:outline-none"
           />
         </div>
@@ -140,13 +138,9 @@ export function PurchaseLineRow({
         </div>
         <div>
           <label className="mb-1 block text-xs font-medium text-muted">Unit Cost</label>
-          <input
-            type="text"
-            inputMode="decimal"
+          <KeyboardNumberInput
             value={line.unitCost}
-            onChange={(e) => {
-              if (/^\d*\.?\d*$/.test(e.target.value)) onChange({ ...line, unitCost: e.target.value });
-            }}
+            onChange={(v) => onChange({ ...line, unitCost: v })}
             className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-right text-sm tabular-nums text-foreground focus:border-primary focus:outline-none"
           />
         </div>

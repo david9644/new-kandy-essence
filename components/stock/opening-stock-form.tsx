@@ -3,6 +3,9 @@
 import { useState, useTransition } from "react";
 import { TypeAheadSearch } from "@/components/shared/type-ahead-search";
 import { createOpeningStock } from "@/app/(app)/stock/opening/actions";
+import { KeyboardTextInput } from "@/components/keyboard/keyboard-text-input";
+import { KeyboardTextArea } from "@/components/keyboard/keyboard-textarea";
+import { KeyboardNumberInput } from "@/components/keyboard/keyboard-number-input";
 
 interface ItemOption {
   id: string;
@@ -110,9 +113,9 @@ export function OpeningStockForm({ items }: { items: ItemOption[] }) {
                 <label className="mb-1.5 block text-sm font-medium text-foreground">
                   Batch Number
                 </label>
-                <input
+                <KeyboardTextInput
                   value={batchNumber}
-                  onChange={(e) => setBatchNumber(e.target.value)}
+                  onChange={setBatchNumber}
                   className="w-full rounded-lg border border-border bg-surface px-4 py-3 text-base text-foreground focus:border-primary focus:outline-none"
                 />
               </div>
@@ -134,13 +137,9 @@ export function OpeningStockForm({ items }: { items: ItemOption[] }) {
           <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="mb-1.5 block text-sm font-medium text-foreground">Quantity</label>
-              <input
-                type="text"
-                inputMode="decimal"
+              <KeyboardNumberInput
                 value={quantity}
-                onChange={(e) => {
-                  if (/^\d*\.?\d*$/.test(e.target.value)) setQuantity(e.target.value);
-                }}
+                onChange={setQuantity}
                 className="w-full rounded-lg border border-border bg-surface px-4 py-3 text-right text-base tabular-nums text-foreground focus:border-primary focus:outline-none"
               />
             </div>
@@ -162,13 +161,9 @@ export function OpeningStockForm({ items }: { items: ItemOption[] }) {
               <label className="mb-1.5 block text-sm font-medium text-foreground">
                 Cost Price
               </label>
-              <input
-                type="text"
-                inputMode="decimal"
+              <KeyboardNumberInput
                 value={costPrice}
-                onChange={(e) => {
-                  if (/^\d*\.?\d*$/.test(e.target.value)) setCostPrice(e.target.value);
-                }}
+                onChange={setCostPrice}
                 className="w-full rounded-lg border border-border bg-surface px-4 py-3 text-right text-base tabular-nums text-foreground focus:border-primary focus:outline-none"
               />
             </div>
@@ -176,9 +171,9 @@ export function OpeningStockForm({ items }: { items: ItemOption[] }) {
 
           <div>
             <label className="mb-1.5 block text-sm font-medium text-foreground">Notes</label>
-            <textarea
+            <KeyboardTextArea
               value={notes}
-              onChange={(e) => setNotes(e.target.value)}
+              onChange={setNotes}
               rows={2}
               className="w-full rounded-lg border border-border bg-surface px-4 py-3 text-base text-foreground focus:border-primary focus:outline-none"
             />
