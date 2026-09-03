@@ -906,7 +906,17 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["user_role"]
       }
+      delete_opening_stock: { Args: { p_entry_id: string }; Returns: undefined }
       delete_purchase: { Args: { p_purchase_id: string }; Returns: undefined }
+      delete_stock_adjustment: {
+        Args: { p_adjustment_id: string }
+        Returns: undefined
+      }
+      delete_stock_out: { Args: { p_stock_out_id: string }; Returns: undefined }
+      delete_supplier_payment: {
+        Args: { p_payment_id: string }
+        Returns: undefined
+      }
       get_supplier_balance: { Args: { p_supplier_id: string }; Returns: number }
       get_supplier_balances: {
         Args: never
@@ -941,10 +951,30 @@ export type Database = {
         }[]
       }
       is_owner: { Args: never; Returns: boolean }
+      stock_out_apply_fefo: {
+        Args: { p_base_qty: number; p_item_id: string; p_stock_out_id: string }
+        Returns: undefined
+      }
+      stock_out_reverse: {
+        Args: { p_stock_out_id: string }
+        Returns: undefined
+      }
       update_cheque_status: {
         Args: {
           p_cheque_id: string
           p_status: Database["public"]["Enums"]["cheque_status"]
+        }
+        Returns: undefined
+      }
+      update_opening_stock: {
+        Args: {
+          p_batch_number: string
+          p_cost_price: number
+          p_entry_id: string
+          p_expiry_date: string
+          p_notes: string
+          p_quantity: number
+          p_unit_name: string
         }
         Returns: undefined
       }
@@ -954,6 +984,35 @@ export type Database = {
           p_notes: string
           p_purchase_id: string
           p_reference_no: string
+        }
+        Returns: undefined
+      }
+      update_stock_adjustment: {
+        Args: {
+          p_adjustment_id: string
+          p_date: string
+          p_quantity_change: number
+          p_reason: string
+        }
+        Returns: undefined
+      }
+      update_stock_out: {
+        Args: {
+          p_date: string
+          p_quantity: number
+          p_stock_out_id: string
+          p_unit_name: string
+        }
+        Returns: undefined
+      }
+      update_supplier_payment: {
+        Args: {
+          p_amount: number
+          p_cheque: Json
+          p_date: string
+          p_notes: string
+          p_payment_id: string
+          p_payment_type: Database["public"]["Enums"]["payment_method"]
         }
         Returns: undefined
       }

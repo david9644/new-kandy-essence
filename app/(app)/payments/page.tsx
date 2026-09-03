@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireOwner } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { PaymentForm } from "@/components/payments/payment-form";
@@ -28,16 +29,21 @@ export default async function PaymentsPage() {
         <h2 className="mb-4 text-lg font-medium text-foreground">Recent Payments</h2>
         <ul className="divide-y divide-border rounded-xl border border-border bg-surface">
           {(recent ?? []).map((p) => (
-            <li key={p.id} className="flex items-center justify-between px-4 py-3 text-sm">
-              <div>
-                <p className="font-medium text-foreground">
-                  {(p.suppliers as { name: string } | null)?.name}
-                </p>
-                <p className="text-xs capitalize text-muted">
-                  {p.date} &middot; {p.payment_type}
-                </p>
-              </div>
-              <span className="font-medium text-foreground">{formatCurrency(p.amount)}</span>
+            <li key={p.id}>
+              <Link
+                href={`/payments/${p.id}`}
+                className="flex min-h-[44px] items-center justify-between px-4 py-3 text-sm active:bg-background"
+              >
+                <div>
+                  <p className="font-medium text-foreground">
+                    {(p.suppliers as { name: string } | null)?.name}
+                  </p>
+                  <p className="text-xs capitalize text-muted">
+                    {p.date} &middot; {p.payment_type}
+                  </p>
+                </div>
+                <span className="font-medium text-foreground">{formatCurrency(p.amount)}</span>
+              </Link>
             </li>
           ))}
           {(recent ?? []).length === 0 && (

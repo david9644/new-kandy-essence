@@ -1,14 +1,22 @@
 import Link from "next/link";
 import { requireProfile } from "@/lib/auth/session";
 import { LogoutButton } from "@/components/shared/logout-button";
+import { MoreNavMenu } from "@/components/shared/more-nav-menu";
 
-const NAV_ITEMS: Array<{ href: string; label: string; ownerOnly?: boolean }> = [
+const PRIMARY_NAV_ITEMS: Array<{ href: string; label: string }> = [
   { href: "/dashboard", label: "Dashboard" },
-  { href: "/items", label: "Items" },
-  { href: "/suppliers", label: "Suppliers" },
   { href: "/purchases", label: "Purchases" },
   { href: "/stock", label: "Stock" },
   { href: "/stock/out", label: "Stock-Out" },
+];
+
+// Everything that isn't a primary tab lives behind the "More" button --
+// Opening Stock included, since Add Item now covers starting stock for a
+// new item and this is only needed occasionally (adding stock to an item
+// that already exists).
+const MORE_NAV_ITEMS: Array<{ href: string; label: string; ownerOnly?: boolean }> = [
+  { href: "/items", label: "Items" },
+  { href: "/suppliers", label: "Suppliers" },
   { href: "/stock/opening", label: "Opening Stock", ownerOnly: true },
   { href: "/stock/adjustments", label: "Adjustments", ownerOnly: true },
   { href: "/payments", label: "Payments", ownerOnly: true },
@@ -20,7 +28,9 @@ const NAV_ITEMS: Array<{ href: string; label: string; ownerOnly?: boolean }> = [
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const profile = await requireProfile();
-  const visibleItems = NAV_ITEMS.filter((item) => !item.ownerOnly || profile.role === "owner");
+  const visibleMoreItems = MORE_NAV_ITEMS.filter(
+    (item) => !item.ownerOnly || profile.role === "owner"
+  );
 
   return (
     <div className="min-h-screen bg-background">
@@ -35,7 +45,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <LogoutButton />
         </div>
         <nav className="flex flex-wrap gap-2 px-4 pb-3">
-          {visibleItems.map((item) => (
+          {PRIMARY_NAV_ITEMS.map((item) => (
             <Link
               key={item.href}
               href={item.href}
@@ -44,6 +54,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               {item.label}
             </Link>
           ))}
+          <MoreNavMenu items={visibleMoreItems} />
         </nav>
       </header>
 

@@ -1,10 +1,17 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
 export interface StockOutInput {
   item_id: string;
+  quantity: number;
+  unit_name: string;
+  date: string;
+}
+
+export interface UpdateStockOutInput {
   quantity: number;
   unit_name: string;
   date: string;
@@ -28,4 +35,34 @@ export async function createStockOut(input: StockOutInput) {
   revalidatePath("/stock");
   revalidatePath("/stock/out");
   return { ok: true };
+}
+
+export async function updateStockOut(stockOutId: string, input: UpdateStockOutInput) {
+  if (!(input.quantity > 0)) return { error: "Quantity must be greater than zero." };
+  if (!input.date) return { error: "Select a date." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("update_stock_out", {
+    p_stock_out_id: stockOutId,
+    p_quantity: input.quantity,
+    p_unit_name: input.unit_name,
+    p_date: input.date,
+  });
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/stock");
+  revalidatePath("/stock/out");
+  revalidatePath(`/stock/out/${stockOutId}`);
+  return { ok: true };
+}
+
+export async function deleteStockOut(stockOutId: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("delete_stock_out", { p_stock_out_id: stockOutId });
+  if (error) return { error: error.message };
+
+  revalidatePath("/stock");
+  revalidatePath("/stock/out");
+  redirect("/stock/out");
 }

@@ -1,11 +1,18 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
 export interface StockAdjustmentInput {
   item_id: string;
   stock_batch_id: string;
+  quantity_change: number;
+  reason: string;
+  date: string;
+}
+
+export interface UpdateStockAdjustmentInput {
   quantity_change: number;
   reason: string;
   date: string;
@@ -31,4 +38,34 @@ export async function createStockAdjustment(input: StockAdjustmentInput) {
   revalidatePath("/stock");
   revalidatePath("/stock/adjustments");
   return { ok: true };
+}
+
+export async function updateStockAdjustment(adjustmentId: string, input: UpdateStockAdjustmentInput) {
+  if (!input.quantity_change) return { error: "Enter a non-zero quantity change." };
+  if (!input.reason.trim()) return { error: "A reason is required." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("update_stock_adjustment", {
+    p_adjustment_id: adjustmentId,
+    p_quantity_change: input.quantity_change,
+    p_reason: input.reason.trim(),
+    p_date: input.date,
+  });
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/stock");
+  revalidatePath("/stock/adjustments");
+  revalidatePath(`/stock/adjustments/${adjustmentId}`);
+  return { ok: true };
+}
+
+export async function deleteStockAdjustment(adjustmentId: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("delete_stock_adjustment", { p_adjustment_id: adjustmentId });
+  if (error) return { error: error.message };
+
+  revalidatePath("/stock");
+  revalidatePath("/stock/adjustments");
+  redirect("/stock/adjustments");
 }
