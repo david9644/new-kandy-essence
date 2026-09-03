@@ -38,10 +38,11 @@ function applyNumericKey(
   return current + key;
 }
 
-// Drop-in replacement for `<input inputMode="decimal">`. Physical keyboard
-// and mobile's own software keyboard keep working unchanged (this is a
-// normal focusable, directly-typable input); the floating NumericKeypad is
-// additionally offered for stations that have no other way to type.
+// Drop-in replacement for `<input inputMode="decimal">`. inputMode="none"
+// suppresses the OS/browser's own software keyboard (which would otherwise
+// pop up alongside our custom NumericKeypad on the touch station); physical
+// keyboard input keeps working unchanged since inputMode only affects which
+// on-screen keyboard the platform offers, not actual key input.
 export function KeyboardNumberInput({
   value,
   onChange,
@@ -69,7 +70,7 @@ export function KeyboardNumberInput({
     <input
       ref={inputRef}
       type="text"
-      inputMode="decimal"
+      inputMode="none"
       value={value}
       maxLength={maxLength}
       onChange={(e) => {

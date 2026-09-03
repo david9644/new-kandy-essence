@@ -6,10 +6,14 @@ import { createClient } from "@/lib/supabase/server";
 export async function createBankAccount(name: string) {
   if (!name.trim()) return { error: "Account name is required." };
   const supabase = await createClient();
-  const { error } = await supabase.from("bank_accounts").insert({ name: name.trim() });
-  if (error) return { error: error.message };
+  const { data, error } = await supabase
+    .from("bank_accounts")
+    .insert({ name: name.trim() })
+    .select("id, name")
+    .single();
+  if (error || !data) return { error: error?.message ?? "Could not create bank account." };
   revalidatePath("/settings");
-  return { ok: true };
+  return { ok: true, id: data.id, name: data.name };
 }
 
 export async function setBankAccountActive(id: string, active: boolean) {

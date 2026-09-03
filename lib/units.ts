@@ -6,7 +6,6 @@ export const COMMON_UNITS = [
   "kg",
   "g",
   "box",
-  "dozen",
   "litre",
   "ml",
   "pack",

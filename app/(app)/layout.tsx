@@ -8,6 +8,7 @@ const PRIMARY_NAV_ITEMS: Array<{ href: string; label: string }> = [
   { href: "/purchases", label: "Purchases" },
   { href: "/stock", label: "Stock" },
   { href: "/stock/out", label: "Stock-Out" },
+  { href: "/reports", label: "Reports" },
 ];
 
 // Everything that isn't a primary tab lives behind the "More" button --
@@ -21,7 +22,6 @@ const MORE_NAV_ITEMS: Array<{ href: string; label: string; ownerOnly?: boolean }
   { href: "/stock/adjustments", label: "Adjustments", ownerOnly: true },
   { href: "/payments", label: "Payments", ownerOnly: true },
   { href: "/cheques", label: "Cheques", ownerOnly: true },
-  { href: "/reports", label: "Reports" },
   { href: "/users", label: "Users", ownerOnly: true },
   { href: "/settings", label: "Settings", ownerOnly: true },
 ];

@@ -77,7 +77,17 @@ export function TypeAheadSearch<T>({
               <button
                 key={getId(item)}
                 type="button"
-                onClick={() => {
+                onPointerDown={(e) => {
+                  // preventDefault stops the native focus-blur that a
+                  // pointerdown on a non-input element would otherwise
+                  // trigger on the search input. On the touch station,
+                  // that blur closes the on-screen keyboard panel and
+                  // shifts the layout (its reserved bottom padding
+                  // collapses) before the deferred click event fires, so
+                  // the click lands on whatever is now under the finger
+                  // instead of this button -- selecting here, on
+                  // pointerdown, is what makes a single tap register.
+                  e.preventDefault();
                   onSelect(item);
                   setQuery("");
                   setOpen(false);
@@ -94,7 +104,8 @@ export function TypeAheadSearch<T>({
             {onCreateNew && trimmedQuery && (
               <button
                 type="button"
-                onClick={() => {
+                onPointerDown={(e) => {
+                  e.preventDefault();
                   setOpen(false);
                   onCreateNew(trimmedQuery);
                 }}

@@ -124,9 +124,13 @@ export async function setItemActive(itemId: string, active: boolean) {
 export async function createCategory(name: string) {
   if (!name.trim()) return { error: "Category name is required." };
   const supabase = await createClient();
-  const { error } = await supabase.from("categories").insert({ name: name.trim() });
-  if (error) return { error: error.message };
+  const { data, error } = await supabase
+    .from("categories")
+    .insert({ name: name.trim() })
+    .select("id, name")
+    .single();
+  if (error || !data) return { error: error?.message ?? "Could not create category." };
   revalidatePath("/items");
   revalidatePath("/settings");
-  return { ok: true };
+  return { ok: true, id: data.id, name: data.name };
 }

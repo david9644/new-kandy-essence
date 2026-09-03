@@ -6,6 +6,7 @@ import { createOpeningStock } from "@/app/(app)/stock/opening/actions";
 import { COMMON_UNITS } from "@/lib/units";
 import { KeyboardTextInput } from "@/components/keyboard/keyboard-text-input";
 import { KeyboardNumberInput } from "@/components/keyboard/keyboard-number-input";
+import { QuickAddCategoryModal, type QuickCategory } from "@/components/items/quick-add-category-modal";
 
 interface Category {
   id: string;
@@ -87,6 +88,8 @@ function UnitSelect({
 
 export function ItemForm({ categories, initial, onSubmit, submitLabel }: ItemFormProps) {
   const [name, setName] = useState(initial?.name ?? "");
+  const [categoryList, setCategoryList] = useState<Category[]>(categories);
+  const [quickAddCategory, setQuickAddCategory] = useState(false);
   const [categoryId, setCategoryId] = useState(initial?.category_id ?? "");
   const [baseUnit, setBaseUnit] = useState(initial?.base_unit ?? "");
   const [reorderLevel, setReorderLevel] = useState(String(initial?.reorder_level ?? 0));
@@ -190,6 +193,7 @@ export function ItemForm({ categories, initial, onSubmit, submitLabel }: ItemFor
   }
 
   return (
+    <>
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
       {error && (
         <p className="rounded-lg bg-danger-surface px-3 py-2 text-sm text-danger">{error}</p>
@@ -212,21 +216,27 @@ export function ItemForm({ categories, initial, onSubmit, submitLabel }: ItemFor
 
       <div>
         <label className="mb-1.5 block text-sm font-medium text-foreground">Category</label>
-        <select
-          value={categoryId}
-          onChange={(e) => setCategoryId(e.target.value)}
-          className="w-full rounded-lg border border-border bg-surface px-4 py-3 text-base text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-        >
-          <option value="">No category</option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-        <p className="mt-1 text-xs text-muted">
-          Add new categories from Settings.
-        </p>
+        <div className="flex gap-2">
+          <select
+            value={categoryId}
+            onChange={(e) => setCategoryId(e.target.value)}
+            className="w-full rounded-lg border border-border bg-surface px-4 py-3 text-base text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+          >
+            <option value="">No category</option>
+            {categoryList.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={() => setQuickAddCategory(true)}
+            className="flex h-12 shrink-0 items-center whitespace-nowrap rounded-lg border border-border px-3 text-sm font-medium text-foreground active:bg-background"
+          >
+            + Add new
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -384,5 +394,16 @@ export function ItemForm({ categories, initial, onSubmit, submitLabel }: ItemFor
         {pending ? "Saving..." : submitLabel}
       </button>
     </form>
+    {quickAddCategory && (
+      <QuickAddCategoryModal
+        onClose={() => setQuickAddCategory(false)}
+        onCreated={(category: QuickCategory) => {
+          setCategoryList((prev) => [...prev, category]);
+          setCategoryId(category.id);
+          setQuickAddCategory(false);
+        }}
+      />
+    )}
+    </>
   );
 }
