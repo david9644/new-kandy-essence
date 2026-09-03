@@ -917,6 +917,22 @@ export type Database = {
         Args: { p_payment_id: string }
         Returns: undefined
       }
+      get_own_profile: {
+        Args: never
+        Returns: {
+          active: boolean
+          created_at: string
+          full_name: string
+          id: string
+          role: Database["public"]["Enums"]["user_role"]
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "profiles"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       get_supplier_balance: { Args: { p_supplier_id: string }; Returns: number }
       get_supplier_balances: {
         Args: never

@@ -6,17 +6,24 @@ export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 
 export async function getCurrentProfile(): Promise<Profile | null> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
-  if (!user) return null;
+  // getUser() and get_own_profile() run concurrently: the profile lookup
+  // resolves via auth.uid() (from the JWT PostgREST already validated for
+  // this request), so it doesn't need to wait on user.id from getUser().
+  // getUser()'s network-verified result is still the sole authority on
+  // whether the caller is actually signed in -- the profile fetch never
+  // substitutes for it, it just no longer blocks behind it.
+  const [
+    {
+      data: { user },
+    },
+    { data: profile },
+  ] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase.rpc("get_own_profile").maybeSingle(),
+  ]);
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
-    .single();
+  if (!user || !profile || profile.id !== user.id) return null;
 
   return profile;
 }
