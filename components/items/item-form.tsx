@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import type { ItemInput, UnitInput } from "@/app/(app)/items/actions";
 import { createOpeningStock } from "@/app/(app)/stock/opening/actions";
 import { COMMON_UNITS } from "@/lib/units";
@@ -98,9 +97,8 @@ export function ItemForm({ categories, initial, onSubmit, submitLabel }: ItemFor
   const [stockBatchNumber, setStockBatchNumber] = useState("");
   const [stockExpiryDate, setStockExpiryDate] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  const router = useRouter();
 
   function addUnitRow() {
     setUnits((u) => [...u, { unit_name: "", conversion_factor_to_base: 1 }]);
@@ -114,16 +112,31 @@ export function ItemForm({ categories, initial, onSubmit, submitLabel }: ItemFor
     setUnits((u) => u.filter((_, i) => i !== index));
   }
 
+  function reset() {
+    setName("");
+    setCategoryId("");
+    setBaseUnit("");
+    setReorderLevel("0");
+    setBatchTracked(true);
+    setUnits([]);
+    setStockQuantity("");
+    setStockCostPrice("");
+    setStockBatchNumber("");
+    setStockExpiryDate("");
+  }
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    setSaved(false);
+    setSuccessMessage(null);
 
     const startingQty = Number(stockQuantity) || 0;
     if (!initial && startingQty > 0 && batchTracked && !stockExpiryDate) {
       setError("Enter an expiry date for the starting stock batch, or uncheck batch tracking.");
       return;
     }
+
+    const itemName = name;
 
     startTransition(async () => {
       const result = await onSubmit({
@@ -141,8 +154,8 @@ export function ItemForm({ categories, initial, onSubmit, submitLabel }: ItemFor
       }
 
       if (!initial) {
-        // Create mode: land somewhere useful instead of an inline "Saved."
-        // that leaves the user staring at a form they just finished.
+        // Create mode: reset and stay, ready for the next item -- matching
+        // every other fast-entry screen in the app.
         const itemId = result?.id;
         if (itemId && startingQty > 0) {
           const stockResult = await createOpeningStock({
@@ -156,16 +169,23 @@ export function ItemForm({ categories, initial, onSubmit, submitLabel }: ItemFor
           });
           if (stockResult?.error) {
             // Item exists; don't lose it over a stock-entry failure --
-            // send the owner to it with a clear note instead.
-            router.push(`/items/${itemId}?stockError=1`);
+            // say so plainly instead of pretending nothing happened.
+            setSuccessMessage(
+              `Item '${itemName}' created, but starting stock could not be saved. Add it from the Opening Stock page.`
+            );
+            reset();
             return;
           }
+          setSuccessMessage(`Item '${itemName}' created with starting stock.`);
+          reset();
+          return;
         }
-        router.push("/items");
+        setSuccessMessage(`Item '${itemName}' created.`);
+        reset();
         return;
       }
 
-      if (result?.ok) setSaved(true);
+      if (result?.ok) setSuccessMessage("Saved.");
     });
   }
 
@@ -174,8 +194,10 @@ export function ItemForm({ categories, initial, onSubmit, submitLabel }: ItemFor
       {error && (
         <p className="rounded-lg bg-danger-surface px-3 py-2 text-sm text-danger">{error}</p>
       )}
-      {saved && (
-        <p className="rounded-lg bg-success-surface px-3 py-2 text-sm text-success">Saved.</p>
+      {successMessage && (
+        <p className="rounded-lg bg-success-surface px-3 py-2 text-sm text-success">
+          {successMessage}
+        </p>
       )}
 
       <div>

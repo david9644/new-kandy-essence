@@ -87,7 +87,7 @@ export async function createPurchase(input: PurchaseInput) {
 
   revalidatePath("/purchases");
   revalidatePath("/stock");
-  return { ok: true, id: purchaseId };
+  return { ok: true };
 }
 
 export async function updatePurchaseHeader(

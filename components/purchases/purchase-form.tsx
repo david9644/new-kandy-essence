@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { TypeAheadSearch } from "@/components/shared/type-ahead-search";
 import { PurchaseLineRow, emptyLine, lineTotal, type ItemOption, type LineState } from "./purchase-line-row";
 import { ChequeFields, type BankAccountOption } from "./cheque-fields";
@@ -51,8 +50,8 @@ export function PurchaseForm({
   });
   const [lines, setLines] = useState<LineState[]>([emptyLine(nextKey())]);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  const router = useRouter();
 
   const grandTotal = useMemo(() => lines.reduce((sum, l) => sum + lineTotal(l), 0), [lines]);
 
@@ -68,9 +67,20 @@ export function PurchaseForm({
     setLines((prev) => [...prev, emptyLine(nextKey())]);
   }
 
+  function reset() {
+    setSupplier(null);
+    setDate(todayIso());
+    setPaymentType("cash");
+    setReferenceNo("");
+    setNotes("");
+    setCheque({ bank_account_id: "", cheque_number: "", cheque_date: todayIso(), amount: 0 });
+    setLines([emptyLine(nextKey())]);
+  }
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setSuccessMessage(null);
 
     if (!supplier) {
       setError("Select a supplier.");
@@ -81,6 +91,9 @@ export function PurchaseForm({
       setError("Add at least one item.");
       return;
     }
+
+    const supplierName = supplier.name;
+    const total = grandTotal;
 
     startTransition(async () => {
       const result = await createPurchase({
@@ -99,8 +112,12 @@ export function PurchaseForm({
           unit_cost: Number(l.unitCost) || 0,
         })),
       });
-      if (result?.error) setError(result.error);
-      else if (result?.id) router.push(`/purchases/${result.id}`);
+      if (result?.error) {
+        setError(result.error);
+      } else if (result?.ok) {
+        setSuccessMessage(`Purchase of ${formatCurrency(total)} from ${supplierName} saved.`);
+        reset();
+      }
     });
   }
 
@@ -108,6 +125,11 @@ export function PurchaseForm({
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
       {error && (
         <p className="rounded-lg bg-danger-surface px-3 py-2 text-sm text-danger">{error}</p>
+      )}
+      {successMessage && (
+        <p className="rounded-lg bg-success-surface px-3 py-2 text-sm text-success">
+          {successMessage}
+        </p>
       )}
 
       <div>

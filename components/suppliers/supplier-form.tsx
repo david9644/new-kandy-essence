@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import type { SupplierInput } from "@/app/(app)/suppliers/actions";
 import { KeyboardTextInput } from "@/components/keyboard/keyboard-text-input";
 import { KeyboardTextArea } from "@/components/keyboard/keyboard-textarea";
@@ -25,14 +24,23 @@ export function SupplierForm({
   const [address, setAddress] = useState(initial?.address ?? "");
   const [openingBalance, setOpeningBalance] = useState(String(initial?.opening_balance ?? 0));
   const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  const router = useRouter();
+
+  function reset() {
+    setName("");
+    setContact("");
+    setAddress("");
+    setOpeningBalance("0");
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    setSaved(false);
+    setSuccessMessage(null);
+
+    const supplierName = name;
+
     startTransition(async () => {
       const result = await onSubmit({
         name,
@@ -43,9 +51,10 @@ export function SupplierForm({
       if (result?.error) {
         setError(result.error);
       } else if (!initial) {
-        router.push("/suppliers");
+        setSuccessMessage(`Supplier '${supplierName}' created.`);
+        reset();
       } else if (result?.ok) {
-        setSaved(true);
+        setSuccessMessage("Saved.");
       }
     });
   }
@@ -55,8 +64,10 @@ export function SupplierForm({
       {error && (
         <p className="rounded-lg bg-danger-surface px-3 py-2 text-sm text-danger">{error}</p>
       )}
-      {saved && (
-        <p className="rounded-lg bg-success-surface px-3 py-2 text-sm text-success">Saved.</p>
+      {successMessage && (
+        <p className="rounded-lg bg-success-surface px-3 py-2 text-sm text-success">
+          {successMessage}
+        </p>
       )}
 
       <div>

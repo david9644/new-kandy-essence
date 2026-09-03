@@ -44,7 +44,7 @@ export async function createSupplier(input: SupplierInput) {
   if (financialsError) return { error: financialsError.message };
 
   revalidatePath("/suppliers");
-  return { ok: true, id: supplier.id };
+  return { ok: true };
 }
 
 export async function updateSupplier(supplierId: string, input: SupplierInput) {
