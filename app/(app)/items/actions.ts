@@ -49,7 +49,7 @@ export async function createItem(input: ItemInput) {
       reorder_level: input.reorder_level,
       batch_tracked: input.batch_tracked,
     })
-    .select("id")
+    .select("id, code")
     .single();
 
   if (insertError || !item) {
@@ -68,7 +68,7 @@ export async function createItem(input: ItemInput) {
   }
 
   revalidatePath("/items");
-  return { ok: true, id: item.id };
+  return { ok: true, id: item.id, code: item.code };
 }
 
 export async function updateItem(itemId: string, input: ItemInput) {

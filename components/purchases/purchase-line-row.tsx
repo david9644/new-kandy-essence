@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { TypeAheadSearch } from "@/components/shared/type-ahead-search";
 import { formatCurrency } from "@/lib/units";
 import { KeyboardTextInput } from "@/components/keyboard/keyboard-text-input";
 import { KeyboardNumberInput } from "@/components/keyboard/keyboard-number-input";
+import { QuickAddItemModal } from "@/components/items/quick-add-item-modal";
 
 export interface ItemOption {
   id: string;
@@ -12,6 +14,11 @@ export interface ItemOption {
   base_unit: string;
   batch_tracked: boolean;
   units: { unit_name: string; conversion_factor_to_base: number }[];
+}
+
+interface Category {
+  id: string;
+  name: string;
 }
 
 export interface LineState {
@@ -44,15 +51,19 @@ export function lineTotal(line: LineState): number {
 
 export function PurchaseLineRow({
   items,
+  categories,
   line,
   onChange,
   onRemove,
 }: {
   items: ItemOption[];
+  categories: Category[];
   line: LineState;
   onChange: (next: LineState) => void;
   onRemove: () => void;
 }) {
+  const [quickAddItemQuery, setQuickAddItemQuery] = useState<string | null>(null);
+
   if (!line.item) {
     return (
       <div className="rounded-lg border border-border bg-background p-3">
@@ -65,7 +76,20 @@ export function PurchaseLineRow({
           onSelect={(item) =>
             onChange({ ...line, item, unitName: item.base_unit })
           }
+          onCreateNew={setQuickAddItemQuery}
+          createLabel="item"
         />
+        {quickAddItemQuery !== null && (
+          <QuickAddItemModal
+            initialName={quickAddItemQuery}
+            categories={categories}
+            onClose={() => setQuickAddItemQuery(null)}
+            onCreated={(newItem) => {
+              onChange({ ...line, item: newItem, unitName: newItem.base_unit });
+              setQuickAddItemQuery(null);
+            }}
+          />
+        )}
       </div>
     );
   }

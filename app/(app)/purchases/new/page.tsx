@@ -6,15 +6,17 @@ export default async function NewPurchasePage() {
   await requireProfile();
   const supabase = await createClient();
 
-  const [{ data: suppliers }, { data: itemsData }, { data: bankAccounts }] = await Promise.all([
-    supabase.from("suppliers").select("id, code, name").eq("active", true).order("name"),
-    supabase
-      .from("items")
-      .select("id, code, name, base_unit, batch_tracked, item_units(unit_name, conversion_factor_to_base)")
-      .eq("active", true)
-      .order("name"),
-    supabase.from("bank_accounts").select("id, name").eq("active", true).order("name"),
-  ]);
+  const [{ data: suppliers }, { data: itemsData }, { data: bankAccounts }, { data: categories }] =
+    await Promise.all([
+      supabase.from("suppliers").select("id, code, name").eq("active", true).order("name"),
+      supabase
+        .from("items")
+        .select("id, code, name, base_unit, batch_tracked, item_units(unit_name, conversion_factor_to_base)")
+        .eq("active", true)
+        .order("name"),
+      supabase.from("bank_accounts").select("id, name").eq("active", true).order("name"),
+      supabase.from("categories").select("id, name").order("name"),
+    ]);
 
   const items = (itemsData ?? []).map((item) => ({
     id: item.id,
@@ -32,6 +34,7 @@ export default async function NewPurchasePage() {
         suppliers={suppliers ?? []}
         items={items}
         bankAccounts={bankAccounts ?? []}
+        categories={categories ?? []}
       />
     </div>
   );

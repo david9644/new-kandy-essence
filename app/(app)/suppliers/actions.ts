@@ -29,7 +29,7 @@ export async function createSupplier(input: SupplierInput) {
       contact: input.contact.trim() || null,
       address: input.address.trim() || null,
     })
-    .select("id")
+    .select("id, code")
     .single();
 
   if (insertError || !supplier) {
@@ -44,7 +44,7 @@ export async function createSupplier(input: SupplierInput) {
   if (financialsError) return { error: financialsError.message };
 
   revalidatePath("/suppliers");
-  return { ok: true };
+  return { ok: true, id: supplier.id, code: supplier.code };
 }
 
 export async function updateSupplier(supplierId: string, input: SupplierInput) {

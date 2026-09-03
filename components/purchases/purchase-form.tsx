@@ -8,6 +8,7 @@ import { createPurchase } from "@/app/(app)/purchases/actions";
 import { formatCurrency } from "@/lib/units";
 import { KeyboardTextInput } from "@/components/keyboard/keyboard-text-input";
 import { KeyboardTextArea } from "@/components/keyboard/keyboard-textarea";
+import { QuickAddSupplierModal } from "@/components/suppliers/quick-add-supplier-modal";
 import type { Database } from "@/lib/types/database.types";
 
 type PaymentType = Database["public"]["Enums"]["purchase_payment_type"];
@@ -15,6 +16,11 @@ type PaymentType = Database["public"]["Enums"]["purchase_payment_type"];
 export interface SupplierOption {
   id: string;
   code: string;
+  name: string;
+}
+
+interface Category {
+  id: string;
   name: string;
 }
 
@@ -32,12 +38,15 @@ export function PurchaseForm({
   suppliers,
   items,
   bankAccounts,
+  categories,
 }: {
   suppliers: SupplierOption[];
   items: ItemOption[];
   bankAccounts: BankAccountOption[];
+  categories: Category[];
 }) {
   const [supplier, setSupplier] = useState<SupplierOption | null>(null);
+  const [quickAddSupplierQuery, setQuickAddSupplierQuery] = useState<string | null>(null);
   const [date, setDate] = useState(todayIso());
   const [paymentType, setPaymentType] = useState<PaymentType>("cash");
   const [referenceNo, setReferenceNo] = useState("");
@@ -122,7 +131,8 @@ export function PurchaseForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+    <>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-5">
       {error && (
         <p className="rounded-lg bg-danger-surface px-3 py-2 text-sm text-danger">{error}</p>
       )}
@@ -156,6 +166,8 @@ export function PurchaseForm({
             getCode={(s) => s.code}
             placeholder="Search supplier by name or code..."
             onSelect={setSupplier}
+            onCreateNew={setQuickAddSupplierQuery}
+            createLabel="supplier"
           />
         )}
       </div>
@@ -223,6 +235,7 @@ export function PurchaseForm({
             <PurchaseLineRow
               key={line.key}
               items={items}
+              categories={categories}
               line={line}
               onChange={(next) => updateLine(line.key, next)}
               onRemove={() => removeLine(line.key)}
@@ -253,6 +266,17 @@ export function PurchaseForm({
       >
         {pending ? "Saving..." : "Save Purchase"}
       </button>
-    </form>
+      </form>
+      {quickAddSupplierQuery !== null && (
+        <QuickAddSupplierModal
+          initialName={quickAddSupplierQuery}
+          onClose={() => setQuickAddSupplierQuery(null)}
+          onCreated={(newSupplier) => {
+            setSupplier(newSupplier);
+            setQuickAddSupplierQuery(null);
+          }}
+        />
+      )}
+    </>
   );
 }

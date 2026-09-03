@@ -13,6 +13,11 @@ interface TypeAheadSearchProps<T> {
   placeholder?: string;
   disabled?: boolean;
   autoFocus?: boolean;
+  /** When provided, a "+ Add new {createLabel} '<query>'" row appears at the
+   * bottom of the results once the user has typed something, so a missing
+   * item/supplier never has to block the flow the search box is inside. */
+  onCreateNew?: (query: string) => void;
+  createLabel?: string;
 }
 
 // Filters an already-fetched, in-memory list as the user types -- at the
@@ -28,6 +33,8 @@ export function TypeAheadSearch<T>({
   placeholder = "Search by name or code...",
   disabled,
   autoFocus,
+  onCreateNew,
+  createLabel = "item",
 }: TypeAheadSearchProps<T>) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
@@ -42,6 +49,8 @@ export function TypeAheadSearch<T>({
       )
       .slice(0, 50);
   }, [items, query, getLabel, getCode]);
+
+  const trimmedQuery = query.trim();
 
   return (
     <div className="relative w-full">
@@ -82,6 +91,18 @@ export function TypeAheadSearch<T>({
                 </span>
               </button>
             ))}
+            {onCreateNew && trimmedQuery && (
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  onCreateNew(trimmedQuery);
+                }}
+                className="flex w-full min-h-[44px] items-center border-t border-border px-4 py-3 text-left text-sm font-medium text-primary active:bg-background"
+              >
+                + Add new {createLabel} &lsquo;{trimmedQuery}&rsquo;
+              </button>
+            )}
           </div>
         </>
       )}
