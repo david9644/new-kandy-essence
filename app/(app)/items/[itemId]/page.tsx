@@ -1,5 +1,6 @@
 import { Fragment } from "react";
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { requireProfile } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { ItemForm } from "@/components/items/item-form";
@@ -9,10 +10,13 @@ import { formatCurrency } from "@/lib/units";
 
 export default async function ItemDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ itemId: string }>;
+  searchParams: Promise<{ stockError?: string }>;
 }) {
   const { itemId } = await params;
+  const { stockError } = await searchParams;
   const profile = await requireProfile();
   const supabase = await createClient();
 
@@ -31,6 +35,15 @@ export default async function ItemDetailPage({
 
   return (
     <div className="mx-auto max-w-lg">
+      {stockError && (
+        <p className="mb-4 rounded-lg bg-warning-surface px-3 py-2 text-sm text-warning">
+          Item created, but starting stock could not be saved. Add it from the{" "}
+          <Link href="/stock/opening" className="font-medium underline">
+            Opening Stock
+          </Link>{" "}
+          page.
+        </p>
+      )}
       <div className="mb-4 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-foreground">{item.name}</h1>

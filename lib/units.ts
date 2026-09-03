@@ -1,3 +1,21 @@
+// Fixed vocabulary offered on the Item Master's unit selects, so every
+// screen that lists units (Purchase, Stock-Out, Opening Stock) draws from
+// the same spelling/casing instead of accumulating variants like "Kg"/"kg".
+export const COMMON_UNITS = [
+  "piece",
+  "kg",
+  "g",
+  "box",
+  "dozen",
+  "litre",
+  "ml",
+  "pack",
+  "bag",
+  "carton",
+  "bundle",
+  "roll",
+] as const;
+
 export interface UnitOption {
   unit_name: string;
   conversion_factor_to_base: number;

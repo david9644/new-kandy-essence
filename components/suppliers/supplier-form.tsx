@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import type { SupplierInput } from "@/app/(app)/suppliers/actions";
 import { KeyboardTextInput } from "@/components/keyboard/keyboard-text-input";
 import { KeyboardTextArea } from "@/components/keyboard/keyboard-textarea";
@@ -26,6 +27,7 @@ export function SupplierForm({
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [pending, startTransition] = useTransition();
+  const router = useRouter();
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -38,8 +40,13 @@ export function SupplierForm({
         address,
         opening_balance: Number(openingBalance) || 0,
       });
-      if (result?.error) setError(result.error);
-      else if (result?.ok) setSaved(true);
+      if (result?.error) {
+        setError(result.error);
+      } else if (!initial) {
+        router.push("/suppliers");
+      } else if (result?.ok) {
+        setSaved(true);
+      }
     });
   }
 

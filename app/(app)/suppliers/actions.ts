@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
 export interface SupplierInput {
@@ -45,7 +44,7 @@ export async function createSupplier(input: SupplierInput) {
   if (financialsError) return { error: financialsError.message };
 
   revalidatePath("/suppliers");
-  redirect(`/suppliers/${supplier.id}`);
+  return { ok: true, id: supplier.id };
 }
 
 export async function updateSupplier(supplierId: string, input: SupplierInput) {

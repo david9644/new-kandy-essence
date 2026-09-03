@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { TypeAheadSearch } from "@/components/shared/type-ahead-search";
 import { PurchaseLineRow, emptyLine, lineTotal, type ItemOption, type LineState } from "./purchase-line-row";
 import { ChequeFields, type BankAccountOption } from "./cheque-fields";
@@ -51,6 +52,7 @@ export function PurchaseForm({
   const [lines, setLines] = useState<LineState[]>([emptyLine(nextKey())]);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const router = useRouter();
 
   const grandTotal = useMemo(() => lines.reduce((sum, l) => sum + lineTotal(l), 0), [lines]);
 
@@ -98,6 +100,7 @@ export function PurchaseForm({
         })),
       });
       if (result?.error) setError(result.error);
+      else if (result?.id) router.push(`/purchases/${result.id}`);
     });
   }
 

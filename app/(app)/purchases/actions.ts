@@ -87,7 +87,7 @@ export async function createPurchase(input: PurchaseInput) {
 
   revalidatePath("/purchases");
   revalidatePath("/stock");
-  redirect(`/purchases/${purchaseId}`);
+  return { ok: true, id: purchaseId };
 }
 
 export async function updatePurchaseHeader(

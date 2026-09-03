@@ -1,7 +1,10 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import type { ItemInput, UnitInput } from "@/app/(app)/items/actions";
+import { createOpeningStock } from "@/app/(app)/stock/opening/actions";
+import { COMMON_UNITS } from "@/lib/units";
 import { KeyboardTextInput } from "@/components/keyboard/keyboard-text-input";
 import { KeyboardNumberInput } from "@/components/keyboard/keyboard-number-input";
 
@@ -20,8 +23,67 @@ interface ItemFormProps {
     batch_tracked: boolean;
     units: UnitInput[];
   };
-  onSubmit: (input: ItemInput) => Promise<{ error?: string; ok?: boolean }>;
+  onSubmit: (input: ItemInput) => Promise<{ error?: string; ok?: boolean; id?: string }>;
   submitLabel: string;
+}
+
+// A <select> of common unit names plus an "Other..." escape hatch. Keeping
+// this fixed vocabulary is what stops "Kg"/"kg"/"KG" from piling up across
+// items -- every other unit select in the app (Purchase, Stock-Out, Opening
+// Stock) is driven entirely by whatever gets saved here.
+function UnitSelect({
+  value,
+  onChange,
+  required,
+  selectClassName,
+  inputClassName,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  required?: boolean;
+  selectClassName: string;
+  inputClassName: string;
+}) {
+  const isCommon = (COMMON_UNITS as readonly string[]).includes(value);
+  const [showOther, setShowOther] = useState(value !== "" && !isCommon);
+
+  return (
+    <div className="flex flex-col gap-2">
+      <select
+        value={showOther ? "__other__" : value}
+        onChange={(e) => {
+          if (e.target.value === "__other__") {
+            setShowOther(true);
+            onChange("");
+          } else {
+            setShowOther(false);
+            onChange(e.target.value);
+          }
+        }}
+        required={required}
+        className={selectClassName}
+      >
+        <option value="" disabled>
+          Select unit
+        </option>
+        {COMMON_UNITS.map((u) => (
+          <option key={u} value={u}>
+            {u}
+          </option>
+        ))}
+        <option value="__other__">Other...</option>
+      </select>
+      {showOther && (
+        <KeyboardTextInput
+          value={value}
+          onChange={onChange}
+          placeholder="Enter unit name"
+          required={required}
+          className={inputClassName}
+        />
+      )}
+    </div>
+  );
 }
 
 export function ItemForm({ categories, initial, onSubmit, submitLabel }: ItemFormProps) {
@@ -31,9 +93,14 @@ export function ItemForm({ categories, initial, onSubmit, submitLabel }: ItemFor
   const [reorderLevel, setReorderLevel] = useState(String(initial?.reorder_level ?? 0));
   const [batchTracked, setBatchTracked] = useState(initial?.batch_tracked ?? true);
   const [units, setUnits] = useState<UnitInput[]>(initial?.units ?? []);
+  const [stockQuantity, setStockQuantity] = useState("");
+  const [stockCostPrice, setStockCostPrice] = useState("");
+  const [stockBatchNumber, setStockBatchNumber] = useState("");
+  const [stockExpiryDate, setStockExpiryDate] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [pending, startTransition] = useTransition();
+  const router = useRouter();
 
   function addUnitRow() {
     setUnits((u) => [...u, { unit_name: "", conversion_factor_to_base: 1 }]);
@@ -51,6 +118,13 @@ export function ItemForm({ categories, initial, onSubmit, submitLabel }: ItemFor
     e.preventDefault();
     setError(null);
     setSaved(false);
+
+    const startingQty = Number(stockQuantity) || 0;
+    if (!initial && startingQty > 0 && batchTracked && !stockExpiryDate) {
+      setError("Enter an expiry date for the starting stock batch, or uncheck batch tracking.");
+      return;
+    }
+
     startTransition(async () => {
       const result = await onSubmit({
         name,
@@ -60,8 +134,38 @@ export function ItemForm({ categories, initial, onSubmit, submitLabel }: ItemFor
         batch_tracked: batchTracked,
         units,
       });
-      if (result?.error) setError(result.error);
-      else if (result?.ok) setSaved(true);
+
+      if (result?.error) {
+        setError(result.error);
+        return;
+      }
+
+      if (!initial) {
+        // Create mode: land somewhere useful instead of an inline "Saved."
+        // that leaves the user staring at a form they just finished.
+        const itemId = result?.id;
+        if (itemId && startingQty > 0) {
+          const stockResult = await createOpeningStock({
+            item_id: itemId,
+            batch_number: stockBatchNumber,
+            expiry_date: stockExpiryDate,
+            quantity: startingQty,
+            unit_name: baseUnit,
+            cost_price: Number(stockCostPrice) || 0,
+            notes: "",
+          });
+          if (stockResult?.error) {
+            // Item exists; don't lose it over a stock-entry failure --
+            // send the owner to it with a clear note instead.
+            router.push(`/items/${itemId}?stockError=1`);
+            return;
+          }
+        }
+        router.push("/items");
+        return;
+      }
+
+      if (result?.ok) setSaved(true);
     });
   }
 
@@ -106,12 +210,12 @@ export function ItemForm({ categories, initial, onSubmit, submitLabel }: ItemFor
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="mb-1.5 block text-sm font-medium text-foreground">Base Unit</label>
-          <KeyboardTextInput
+          <UnitSelect
             value={baseUnit}
             onChange={setBaseUnit}
-            placeholder="e.g. piece, kg"
             required
-            className="w-full rounded-lg border border-border bg-surface px-4 py-3 text-base text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            selectClassName="w-full rounded-lg border border-border bg-surface px-4 py-3 text-base text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            inputClassName="w-full rounded-lg border border-border bg-surface px-4 py-3 text-base text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
         </div>
         <div>
@@ -151,31 +255,34 @@ export function ItemForm({ categories, initial, onSubmit, submitLabel }: ItemFor
         </div>
         <div className="flex flex-col gap-2">
           {units.map((unit, i) => (
-            <div key={i} className="flex items-center gap-2">
-              <KeyboardTextInput
+            <div key={i} className="flex flex-col gap-2 rounded-lg border border-border bg-background p-3">
+              <UnitSelect
                 value={unit.unit_name}
                 onChange={(v) => updateUnitRow(i, { unit_name: v })}
-                placeholder="e.g. box"
-                className="flex-1 rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none"
+                required
+                selectClassName="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none"
+                inputClassName="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none"
               />
-              <span className="text-sm text-muted">=</span>
-              <KeyboardNumberInput
-                value={String(unit.conversion_factor_to_base)}
-                onChange={(v) =>
-                  updateUnitRow(i, {
-                    conversion_factor_to_base: v === "" ? 0 : Number(v),
-                  })
-                }
-                className="w-20 rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none"
-              />
-              <span className="text-sm text-muted">{baseUnit || "base"}</span>
-              <button
-                type="button"
-                onClick={() => removeUnitRow(i)}
-                className="flex h-9 w-9 items-center justify-center rounded-lg border border-border text-danger active:bg-danger-surface"
-              >
-                ✕
-              </button>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted">=</span>
+                <KeyboardNumberInput
+                  value={String(unit.conversion_factor_to_base)}
+                  onChange={(v) =>
+                    updateUnitRow(i, {
+                      conversion_factor_to_base: v === "" ? 0 : Number(v),
+                    })
+                  }
+                  className="w-20 rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none"
+                />
+                <span className="text-sm text-muted">{baseUnit || "base"}</span>
+                <button
+                  type="button"
+                  onClick={() => removeUnitRow(i)}
+                  className="ml-auto flex h-9 w-9 items-center justify-center rounded-lg border border-border text-danger active:bg-danger-surface"
+                >
+                  ✕
+                </button>
+              </div>
             </div>
           ))}
           {units.length === 0 && (
@@ -185,6 +292,67 @@ export function ItemForm({ categories, initial, onSubmit, submitLabel }: ItemFor
           )}
         </div>
       </div>
+
+      {!initial && (
+        <div className="flex flex-col gap-4 rounded-xl border border-border bg-background p-4">
+          <div>
+            <p className="text-sm font-medium text-foreground">Starting Stock (optional)</p>
+            <p className="text-xs text-muted">
+              Add opening quantity for this item now, or skip and use the Opening Stock page
+              later.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-foreground">Quantity</label>
+              <KeyboardNumberInput
+                value={stockQuantity}
+                onChange={setStockQuantity}
+                className="w-full rounded-lg border border-border bg-surface px-4 py-3 text-right text-base tabular-nums text-foreground focus:border-primary focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-foreground">
+                Cost Price
+              </label>
+              <KeyboardNumberInput
+                value={stockCostPrice}
+                onChange={setStockCostPrice}
+                className="w-full rounded-lg border border-border bg-surface px-4 py-3 text-right text-base tabular-nums text-foreground focus:border-primary focus:outline-none"
+              />
+            </div>
+          </div>
+
+          {batchTracked && (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-foreground">
+                  Batch Number
+                </label>
+                <KeyboardTextInput
+                  value={stockBatchNumber}
+                  onChange={setStockBatchNumber}
+                  className="w-full rounded-lg border border-border bg-surface px-4 py-3 text-base text-foreground focus:border-primary focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-foreground">
+                  Expiry Date
+                </label>
+                <input
+                  type="date"
+                  value={stockExpiryDate}
+                  onChange={(e) => setStockExpiryDate(e.target.value)}
+                  className="w-full rounded-lg border border-border bg-surface px-4 py-3 text-base text-foreground focus:border-primary focus:outline-none"
+                />
+              </div>
+            </div>
+          )}
+
+          <p className="text-xs text-muted">Quantity is in {baseUnit || "the base unit"}.</p>
+        </div>
+      )}
 
       <button
         type="submit"

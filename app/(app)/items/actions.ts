@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
 export interface UnitInput {
@@ -69,7 +68,7 @@ export async function createItem(input: ItemInput) {
   }
 
   revalidatePath("/items");
-  redirect(`/items/${item.id}`);
+  return { ok: true, id: item.id };
 }
 
 export async function updateItem(itemId: string, input: ItemInput) {
