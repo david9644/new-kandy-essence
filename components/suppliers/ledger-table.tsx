@@ -69,11 +69,17 @@ export function LedgerTable({
           </thead>
           <tbody>
             {rows.map((row) => {
-              const clickable = row.entry_type === "payment" && row.paymentDetail;
+              const isPayment = row.entry_type === "payment" && row.paymentDetail;
+              const isPurchase = row.entry_type === "purchase";
+              const clickable = isPayment || isPurchase;
+              function handleClick() {
+                if (isPayment) setOpenId(row.entry_id);
+                else if (isPurchase) router.push(`/purchases/${row.entry_id}`);
+              }
               return (
                 <tr
                   key={row.entry_id}
-                  onClick={clickable ? () => setOpenId(row.entry_id) : undefined}
+                  onClick={clickable ? handleClick : undefined}
                   className={`border-t border-border ${
                     clickable ? "cursor-pointer active:bg-background" : ""
                   }`}
