@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ChequeInput } from "@/app/(app)/purchases/actions";
+import { formatCurrency } from "@/lib/units";
 import { KeyboardTextInput } from "@/components/keyboard/keyboard-text-input";
-import { KeyboardNumberInput } from "@/components/keyboard/keyboard-number-input";
 import { QuickAddBankModal } from "@/components/settings/quick-add-bank-modal";
 
 export interface BankAccountOption {
@@ -15,13 +15,23 @@ export function ChequeFields({
   bankAccounts,
   value,
   onChange,
+  amount,
 }: {
   bankAccounts: BankAccountOption[];
   value: ChequeInput;
   onChange: (next: ChequeInput) => void;
+  /** The purchase total or payment amount -- the cheque amount always
+   * equals this, so it's never a separately-typed field that could drift
+   * from it. */
+  amount: number;
 }) {
   const [accounts, setAccounts] = useState(bankAccounts);
   const [quickAddBank, setQuickAddBank] = useState(false);
+
+  useEffect(() => {
+    onChange({ ...value, amount });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [amount]);
 
   return (
     <div className="mb-4 flex flex-col gap-3 rounded-lg border border-border bg-background p-3">
@@ -70,11 +80,9 @@ export function ChequeFields({
       </div>
       <div>
         <label className="mb-1 block text-xs font-medium text-muted">Cheque Amount</label>
-        <KeyboardNumberInput
-          value={value.amount ? String(value.amount) : ""}
-          onChange={(v) => onChange({ ...value, amount: v === "" ? 0 : Number(v) })}
-          className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm tabular-nums text-foreground focus:border-primary focus:outline-none"
-        />
+        <div className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-right text-sm tabular-nums text-muted">
+          {formatCurrency(amount)}
+        </div>
       </div>
       {quickAddBank && (
         <QuickAddBankModal

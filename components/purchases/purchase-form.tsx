@@ -216,7 +216,7 @@ export function PurchaseForm({
       </div>
 
       {paymentType === "cheque" && (
-        <ChequeFields bankAccounts={bankAccounts} value={cheque} onChange={setCheque} />
+        <ChequeFields bankAccounts={bankAccounts} value={cheque} onChange={setCheque} amount={grandTotal} />
       )}
 
       <div>

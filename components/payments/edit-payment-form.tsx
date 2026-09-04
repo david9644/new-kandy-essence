@@ -102,7 +102,12 @@ export function EditPaymentForm({
       </div>
 
       {paymentType === "cheque" && (
-        <ChequeFields bankAccounts={bankAccounts} value={cheque} onChange={setCheque} />
+        <ChequeFields
+          bankAccounts={bankAccounts}
+          value={cheque}
+          onChange={setCheque}
+          amount={Number(amount) || 0}
+        />
       )}
 
       <div>
