@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireProfile } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
@@ -46,7 +47,10 @@ export default async function PurchaseDetailPage({
         <div>
           <h1 className="text-2xl font-semibold text-foreground">Purchase #{purchase.purchase_no}</h1>
           <p className="text-sm text-muted">
-            {supplier?.name} ({supplier?.code}) &middot; {purchase.date}
+            <Link href={`/suppliers/${purchase.supplier_id}`} className="font-medium text-primary">
+              {supplier?.name} ({supplier?.code})
+            </Link>{" "}
+            &middot; {purchase.date}
           </p>
         </div>
         {profile.role === "owner" && <DeletePurchaseButton purchaseId={purchase.id} />}
@@ -55,7 +59,15 @@ export default async function PurchaseDetailPage({
       <div className="mb-6 grid grid-cols-2 gap-4 rounded-xl border border-border bg-surface p-4 text-sm">
         <div>
           <p className="text-muted">Payment Type</p>
-          <p className="capitalize text-foreground">{purchase.payment_type}</p>
+          <p className="capitalize text-foreground">
+            {purchase.payment_type === "cheque" ? (
+              <Link href="/cheques" className="font-medium capitalize text-primary">
+                {purchase.payment_type}
+              </Link>
+            ) : (
+              purchase.payment_type
+            )}
+          </p>
         </div>
         <div>
           <p className="text-muted">Total</p>
@@ -68,13 +80,13 @@ export default async function PurchaseDetailPage({
           </div>
         )}
         {cheque && (
-          <div>
+          <Link href="/cheques" className="block">
             <p className="text-muted">Cheque</p>
-            <p className="text-foreground">
+            <p className="font-medium text-primary">
               {cheque.cheque_number} &middot; {cheque.bank_accounts?.name} &middot; {cheque.cheque_date}
             </p>
             <p className="capitalize text-muted">{cheque.status}</p>
-          </div>
+          </Link>
         )}
         {purchase.notes && (
           <div className="col-span-2">

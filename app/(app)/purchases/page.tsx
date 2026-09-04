@@ -9,7 +9,7 @@ export default async function PurchasesPage() {
 
   const { data: purchases } = await supabase
     .from("purchases")
-    .select("id, purchase_no, date, payment_type, total_amount, suppliers(name)")
+    .select("id, purchase_no, date, payment_type, total_amount, supplier_id, suppliers(name)")
     .order("date", { ascending: false })
     .order("created_at", { ascending: false })
     .limit(100);
@@ -47,9 +47,19 @@ export default async function PurchasesPage() {
                 </td>
                 <td className="px-4 py-3 text-foreground">{p.date}</td>
                 <td className="px-4 py-3 text-foreground">
-                  {(p.suppliers as { name: string } | null)?.name ?? "-"}
+                  <Link href={`/suppliers/${p.supplier_id}`} className="font-medium text-primary">
+                    {(p.suppliers as { name: string } | null)?.name ?? "-"}
+                  </Link>
                 </td>
-                <td className="px-4 py-3 capitalize text-muted">{p.payment_type}</td>
+                <td className="px-4 py-3 capitalize text-muted">
+                  {p.payment_type === "cheque" ? (
+                    <Link href="/cheques" className="font-medium capitalize text-primary">
+                      {p.payment_type}
+                    </Link>
+                  ) : (
+                    p.payment_type
+                  )}
+                </td>
                 <td className="px-4 py-3 text-right tabular-nums text-foreground">
                   {formatCurrency(p.total_amount)}
                 </td>
