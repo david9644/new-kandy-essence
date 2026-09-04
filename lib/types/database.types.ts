@@ -117,6 +117,173 @@ export type Database = {
           },
         ]
       }
+      customer_credits: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          customer_id: string
+          date: string
+          id: string
+          notes: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          customer_id: string
+          date?: string
+          id?: string
+          notes?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string
+          date?: string
+          id?: string
+          notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_credits_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_credits_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_financials: {
+        Row: {
+          customer_id: string
+          opening_balance: number
+          updated_at: string
+        }
+        Insert: {
+          customer_id: string
+          opening_balance?: number
+          updated_at?: string
+        }
+        Update: {
+          customer_id?: string
+          opening_balance?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_financials_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: true
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          customer_id: string
+          date: string
+          id: string
+          notes: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          customer_id: string
+          date?: string
+          id?: string
+          notes?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string
+          date?: string
+          id?: string
+          notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_payments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_payments_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customers: {
+        Row: {
+          active: boolean
+          code: string
+          contact: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          contact?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          contact?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customers_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customers_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       item_units: {
         Row: {
           conversion_factor_to_base: number
@@ -848,6 +1015,24 @@ export type Database = {
       }
     }
     Functions: {
+      create_customer_credit: {
+        Args: {
+          p_amount: number
+          p_customer_id: string
+          p_date: string
+          p_notes: string
+        }
+        Returns: string
+      }
+      create_customer_payment: {
+        Args: {
+          p_amount: number
+          p_customer_id: string
+          p_date: string
+          p_notes: string
+        }
+        Returns: string
+      }
       create_opening_stock: {
         Args: {
           p_batch_number: string
@@ -906,6 +1091,14 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["user_role"]
       }
+      delete_customer_credit: {
+        Args: { p_credit_id: string }
+        Returns: undefined
+      }
+      delete_customer_payment: {
+        Args: { p_payment_id: string }
+        Returns: undefined
+      }
       delete_opening_stock: { Args: { p_entry_id: string }; Returns: undefined }
       delete_purchase: { Args: { p_purchase_id: string }; Returns: undefined }
       delete_stock_adjustment: {
@@ -916,6 +1109,29 @@ export type Database = {
       delete_supplier_payment: {
         Args: { p_payment_id: string }
         Returns: undefined
+      }
+      get_customer_balance: { Args: { p_customer_id: string }; Returns: number }
+      get_customer_balances: {
+        Args: never
+        Returns: {
+          code: string
+          current_balance: number
+          customer_id: string
+          name: string
+          opening_balance: number
+        }[]
+      }
+      get_customer_ledger: {
+        Args: { p_customer_id: string; p_from: string; p_to: string }
+        Returns: {
+          credit: number
+          debit: number
+          entry_date: string
+          entry_id: string
+          entry_type: string
+          reference: string
+          running_balance: number
+        }[]
       }
       get_own_profile: {
         Args: never
@@ -980,6 +1196,24 @@ export type Database = {
         Args: {
           p_cheque_id: string
           p_status: Database["public"]["Enums"]["cheque_status"]
+        }
+        Returns: undefined
+      }
+      update_customer_credit: {
+        Args: {
+          p_amount: number
+          p_credit_id: string
+          p_date: string
+          p_notes: string
+        }
+        Returns: undefined
+      }
+      update_customer_payment: {
+        Args: {
+          p_amount: number
+          p_date: string
+          p_notes: string
+          p_payment_id: string
         }
         Returns: undefined
       }
