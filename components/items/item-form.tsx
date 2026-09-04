@@ -134,10 +134,6 @@ export function ItemForm({ categories, initial, onSubmit, submitLabel }: ItemFor
     setSuccessMessage(null);
 
     const startingQty = Number(stockQuantity) || 0;
-    if (!initial && startingQty > 0 && batchTracked && !stockExpiryDate) {
-      setError("Enter an expiry date for the starting stock batch, or uncheck batch tracking.");
-      return;
-    }
 
     const itemName = name;
 

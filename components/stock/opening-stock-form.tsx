@@ -127,7 +127,6 @@ export function OpeningStockForm({ items }: { items: ItemOption[] }) {
                   type="date"
                   value={expiryDate}
                   onChange={(e) => setExpiryDate(e.target.value)}
-                  required
                   className="w-full rounded-lg border border-border bg-surface px-4 py-3 text-base text-foreground focus:border-primary focus:outline-none"
                 />
               </div>

@@ -44,11 +44,6 @@ export function EditOpeningStockForm({
     setError(null);
     setSaved(false);
 
-    if (batchTracked && !expiryDate) {
-      setError("Expiry date is required for this item.");
-      return;
-    }
-
     startTransition(async () => {
       const result = await updateOpeningStock(entryId, {
         batch_number: batchNumber,
