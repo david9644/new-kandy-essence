@@ -23,11 +23,16 @@ function todayIso(): string {
 export function PaymentForm({
   suppliers,
   bankAccounts,
+  lockedSupplier,
 }: {
-  suppliers: SupplierOption[];
+  suppliers?: SupplierOption[];
   bankAccounts: BankAccountOption[];
+  /** When set, the supplier is fixed (shown as plain text, no search) and
+   * every reset keeps it locked -- used when this form is opened from a
+   * specific supplier's own ledger page rather than the general flow. */
+  lockedSupplier?: SupplierOption;
 }) {
-  const [supplier, setSupplier] = useState<SupplierOption | null>(null);
+  const [supplier, setSupplier] = useState<SupplierOption | null>(lockedSupplier ?? null);
   const [date, setDate] = useState(todayIso());
   const [amount, setAmount] = useState("");
   const [paymentType, setPaymentType] = useState<PaymentMethod>("cash");
@@ -43,7 +48,7 @@ export function PaymentForm({
   const [pending, startTransition] = useTransition();
 
   function reset() {
-    setSupplier(null);
+    setSupplier(lockedSupplier ?? null);
     setAmount("");
     setNotes("");
     setPaymentType("cash");
@@ -87,7 +92,12 @@ export function PaymentForm({
 
       <div>
         <label className="mb-1.5 block text-sm font-medium text-foreground">Supplier</label>
-        {supplier ? (
+        {lockedSupplier ? (
+          <div className="rounded-lg border border-border bg-surface px-4 py-3">
+            <p className="font-medium text-foreground">{lockedSupplier.name}</p>
+            <p className="text-xs text-muted">{lockedSupplier.code}</p>
+          </div>
+        ) : supplier ? (
           <div className="flex items-center justify-between rounded-lg border border-border bg-surface px-4 py-3">
             <div>
               <p className="font-medium text-foreground">{supplier.name}</p>
@@ -103,7 +113,7 @@ export function PaymentForm({
           </div>
         ) : (
           <TypeAheadSearch
-            items={suppliers}
+            items={suppliers ?? []}
             getId={(s) => s.id}
             getLabel={(s) => s.name}
             getCode={(s) => s.code}

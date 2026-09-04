@@ -14,13 +14,13 @@ const PRIMARY_NAV_ITEMS: Array<{ href: string; label: string }> = [
 // Everything that isn't a primary tab lives behind the "More" button --
 // Opening Stock included, since Add Item now covers starting stock for a
 // new item and this is only needed occasionally (adding stock to an item
-// that already exists).
+// that already exists). Payments lives on each supplier's own ledger page
+// now, not as a separate global screen.
 const MORE_NAV_ITEMS: Array<{ href: string; label: string; ownerOnly?: boolean }> = [
   { href: "/items", label: "Items" },
   { href: "/suppliers", label: "Suppliers" },
   { href: "/stock/opening", label: "Opening Stock", ownerOnly: true },
   { href: "/stock/adjustments", label: "Adjustments", ownerOnly: true },
-  { href: "/payments", label: "Payments", ownerOnly: true },
   { href: "/cheques", label: "Cheques", ownerOnly: true },
   { href: "/users", label: "Users", ownerOnly: true },
   { href: "/settings", label: "Settings", ownerOnly: true },

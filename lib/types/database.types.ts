@@ -950,6 +950,7 @@ export type Database = {
           credit: number
           debit: number
           entry_date: string
+          entry_id: string
           entry_type: string
           reference: string
           running_balance: number

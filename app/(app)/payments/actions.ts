@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/types/database.types";
 
@@ -60,7 +59,7 @@ export async function createSupplierPayment(input: SupplierPaymentInput) {
 
   if (error) return { error: error.message };
 
-  revalidatePath("/payments");
+  revalidatePath(`/suppliers/${input.supplier_id}`);
   revalidatePath("/cheques");
   revalidatePath("/suppliers");
   return { ok: true };
@@ -94,20 +93,21 @@ export async function updateSupplierPayment(paymentId: string, input: UpdateSupp
 
   if (error) return { error: error.message };
 
-  revalidatePath("/payments");
-  revalidatePath(`/payments/${paymentId}`);
   revalidatePath("/cheques");
   revalidatePath("/suppliers");
   return { ok: true };
 }
 
-export async function deleteSupplierPayment(paymentId: string) {
+// supplierId is only used to revalidate that supplier's ledger page --
+// deleting a payment can't move it to a different supplier either, same as
+// updateSupplierPayment above.
+export async function deleteSupplierPayment(paymentId: string, supplierId: string) {
   const supabase = await createClient();
   const { error } = await supabase.rpc("delete_supplier_payment", { p_payment_id: paymentId });
   if (error) return { error: error.message };
 
-  revalidatePath("/payments");
+  revalidatePath(`/suppliers/${supplierId}`);
   revalidatePath("/cheques");
   revalidatePath("/suppliers");
-  redirect("/payments");
+  return { ok: true };
 }
