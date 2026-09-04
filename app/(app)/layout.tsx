@@ -3,11 +3,13 @@ import { requireProfile } from "@/lib/auth/session";
 import { LogoutButton } from "@/components/shared/logout-button";
 import { MoreNavMenu } from "@/components/shared/more-nav-menu";
 
-const PRIMARY_NAV_ITEMS: Array<{ href: string; label: string }> = [
+const PRIMARY_NAV_ITEMS: Array<{ href: string; label: string; ownerOnly?: boolean }> = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/purchases", label: "Purchases" },
-  { href: "/stock", label: "Stock" },
   { href: "/stock/out", label: "Stock-Out" },
+  { href: "/stock", label: "Stock" },
+  { href: "/suppliers", label: "Suppliers" },
+  { href: "/cheques", label: "Cheques", ownerOnly: true },
   { href: "/reports", label: "Reports" },
 ];
 
@@ -18,16 +20,17 @@ const PRIMARY_NAV_ITEMS: Array<{ href: string; label: string }> = [
 // now, not as a separate global screen.
 const MORE_NAV_ITEMS: Array<{ href: string; label: string; ownerOnly?: boolean }> = [
   { href: "/items", label: "Items" },
-  { href: "/suppliers", label: "Suppliers" },
   { href: "/stock/opening", label: "Opening Stock", ownerOnly: true },
   { href: "/stock/adjustments", label: "Adjustments", ownerOnly: true },
-  { href: "/cheques", label: "Cheques", ownerOnly: true },
   { href: "/users", label: "Users", ownerOnly: true },
   { href: "/settings", label: "Settings", ownerOnly: true },
 ];
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const profile = await requireProfile();
+  const visiblePrimaryItems = PRIMARY_NAV_ITEMS.filter(
+    (item) => !item.ownerOnly || profile.role === "owner"
+  );
   const visibleMoreItems = MORE_NAV_ITEMS.filter(
     (item) => !item.ownerOnly || profile.role === "owner"
   );
@@ -45,7 +48,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <LogoutButton />
         </div>
         <nav className="flex flex-wrap gap-2 px-4 pb-3">
-          {PRIMARY_NAV_ITEMS.map((item) => (
+          {visiblePrimaryItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
