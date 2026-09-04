@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireOwner } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { formatCurrency } from "@/lib/units";
@@ -10,7 +11,7 @@ export default async function ChequesPage() {
   const { data: cheques } = await supabase
     .from("cheques")
     .select(
-      "id, cheque_number, cheque_date, amount, status, source, suppliers(name), bank_accounts(name)"
+      "id, cheque_number, cheque_date, amount, status, source, supplier_id, suppliers(name), bank_accounts(name)"
     )
     .order("cheque_date", { ascending: false });
 
@@ -41,7 +42,9 @@ export default async function ChequesPage() {
                 <td className="px-4 py-3 font-medium text-foreground">{c.cheque_number}</td>
                 <td className="px-4 py-3 text-foreground">{c.cheque_date}</td>
                 <td className="px-4 py-3 text-foreground">
-                  {(c.suppliers as { name: string } | null)?.name ?? "-"}
+                  <Link href={`/suppliers/${c.supplier_id}`} className="font-medium text-primary">
+                    {(c.suppliers as { name: string } | null)?.name ?? "-"}
+                  </Link>
                 </td>
                 <td className="px-4 py-3 text-muted">
                   {(c.bank_accounts as { name: string } | null)?.name ?? "-"}
