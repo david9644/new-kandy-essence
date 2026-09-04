@@ -196,30 +196,6 @@ export function PurchaseForm({
       </div>
 
       <div>
-        <label className="mb-1.5 block text-sm font-medium text-foreground">Payment Type</label>
-        <div className="grid grid-cols-3 gap-2">
-          {(["cash", "credit", "cheque"] as const).map((pt) => (
-            <button
-              key={pt}
-              type="button"
-              onClick={() => setPaymentType(pt)}
-              className={`flex h-12 items-center justify-center rounded-lg border text-sm font-medium capitalize ${
-                paymentType === pt
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-surface text-foreground"
-              }`}
-            >
-              {pt}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {paymentType === "cheque" && (
-        <ChequeFields bankAccounts={bankAccounts} value={cheque} onChange={setCheque} amount={grandTotal} />
-      )}
-
-      <div>
         <div className="mb-2 flex items-center justify-between">
           <label className="text-sm font-medium text-foreground">Items</label>
           <button
@@ -243,6 +219,30 @@ export function PurchaseForm({
           ))}
         </div>
       </div>
+
+      <div>
+        <label className="mb-1.5 block text-sm font-medium text-foreground">Payment Type</label>
+        <div className="grid grid-cols-3 gap-2">
+          {(["cash", "credit", "cheque"] as const).map((pt) => (
+            <button
+              key={pt}
+              type="button"
+              onClick={() => setPaymentType(pt)}
+              className={`flex h-12 items-center justify-center rounded-lg border text-sm font-medium capitalize ${
+                paymentType === pt
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border bg-surface text-foreground"
+              }`}
+            >
+              {pt}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {paymentType === "cheque" && (
+        <ChequeFields bankAccounts={bankAccounts} value={cheque} onChange={setCheque} amount={grandTotal} />
+      )}
 
       <div>
         <label className="mb-1.5 block text-sm font-medium text-foreground">Notes</label>

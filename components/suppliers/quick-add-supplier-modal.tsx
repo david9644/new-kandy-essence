@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Modal } from "@/components/shared/modal";
 import { createSupplier } from "@/app/(app)/suppliers/actions";
 import { KeyboardTextInput } from "@/components/keyboard/keyboard-text-input";
+import { KeyboardNumberInput } from "@/components/keyboard/keyboard-number-input";
 
 export interface QuickSupplier {
   id: string;
@@ -70,9 +71,10 @@ export function QuickAddSupplierModal({
           <label className="mb-1.5 block text-sm font-medium text-foreground">
             Contact Number
           </label>
-          <KeyboardTextInput
+          <KeyboardNumberInput
             value={contact}
             onChange={setContact}
+            allowDecimal={false}
             className="w-full rounded-lg border border-border bg-surface px-4 py-3 text-base text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
         </div>

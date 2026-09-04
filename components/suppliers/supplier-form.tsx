@@ -82,9 +82,10 @@ export function SupplierForm({
 
       <div>
         <label className="mb-1.5 block text-sm font-medium text-foreground">Contact Number</label>
-        <KeyboardTextInput
+        <KeyboardNumberInput
           value={contact}
           onChange={setContact}
+          allowDecimal={false}
           className="w-full rounded-lg border border-border bg-surface px-4 py-3 text-base text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
         />
       </div>

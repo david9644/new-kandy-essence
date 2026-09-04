@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import type { ChequeInput } from "@/app/(app)/purchases/actions";
 import { formatCurrency } from "@/lib/units";
-import { KeyboardTextInput } from "@/components/keyboard/keyboard-text-input";
+import { KeyboardNumberInput } from "@/components/keyboard/keyboard-number-input";
 import { QuickAddBankModal } from "@/components/settings/quick-add-bank-modal";
 
 export interface BankAccountOption {
@@ -62,9 +62,10 @@ export function ChequeFields({
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="mb-1 block text-xs font-medium text-muted">Cheque Number</label>
-          <KeyboardTextInput
+          <KeyboardNumberInput
             value={value.cheque_number}
             onChange={(v) => onChange({ ...value, cheque_number: v })}
+            allowDecimal={false}
             className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none"
           />
         </div>
