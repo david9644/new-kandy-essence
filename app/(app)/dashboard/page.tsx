@@ -2,17 +2,19 @@ import Link from "next/link";
 import { requireProfile } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { getLowStockItems, getNearExpiryBatches } from "@/lib/stock/alerts";
-import { formatQuantity } from "@/lib/units";
-import { NEAR_EXPIRY_DAYS } from "@/lib/constants";
+import { getChequesDueSoon } from "@/lib/cheques/alerts";
+import { formatQuantity, formatCurrency } from "@/lib/units";
+import { NEAR_EXPIRY_DAYS, CHEQUE_DUE_DAYS } from "@/lib/constants";
 import { StockRealtimeRefresh } from "@/components/stock/stock-realtime-refresh";
 
 export default async function DashboardPage() {
   const profile = await requireProfile();
   const supabase = await createClient();
 
-  const [lowStock, nearExpiry] = await Promise.all([
+  const [lowStock, nearExpiry, chequesDue] = await Promise.all([
     getLowStockItems(supabase),
     getNearExpiryBatches(supabase),
+    profile.role === "owner" ? getChequesDueSoon(supabase) : Promise.resolve([]),
   ]);
 
   return (
@@ -95,6 +97,48 @@ export default async function DashboardPage() {
             </Link>
           )}
         </section>
+
+        {profile.role === "owner" && (
+          <section className="rounded-xl border border-border bg-surface p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-lg font-medium text-foreground">
+                Cheques Due Soon{" "}
+                <span className="text-xs font-normal text-muted">
+                  (next {CHEQUE_DUE_DAYS} day{CHEQUE_DUE_DAYS === 1 ? "" : "s"})
+                </span>
+              </h2>
+              <span className="rounded-full bg-warning-surface px-2.5 py-1 text-xs font-semibold text-warning">
+                {chequesDue.length}
+              </span>
+            </div>
+            {chequesDue.length === 0 ? (
+              <p className="text-sm text-muted">No cheques due soon.</p>
+            ) : (
+              <ul className="divide-y divide-border">
+                {chequesDue.slice(0, 8).map((c) => (
+                  <li key={c.id} className="flex items-center justify-between py-2 text-sm">
+                    <div>
+                      <Link href="/cheques" className="font-medium text-primary">
+                        {c.supplier_name}
+                      </Link>
+                      <p className="text-xs text-muted">
+                        {c.bank_name} &middot; {formatCurrency(c.amount)}
+                      </p>
+                    </div>
+                    <span className={c.overdue ? "font-medium text-danger" : "text-warning"}>
+                      {c.overdue ? "Overdue" : c.days_until === 0 ? "Today" : `${c.days_until}d`}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {chequesDue.length > 8 && (
+              <Link href="/cheques" className="mt-3 block text-sm font-medium text-primary">
+                View all {chequesDue.length} &rarr;
+              </Link>
+            )}
+          </section>
+        )}
       </div>
     </div>
   );
