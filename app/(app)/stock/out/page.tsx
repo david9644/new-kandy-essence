@@ -31,7 +31,7 @@ export default async function StockOutPage() {
   }));
 
   return (
-    <div className="mx-auto max-w-lg">
+    <div className="mx-auto max-w-lg border-t-[3px] border-t-accent-stock pt-3">
       <h1 className="mb-4 text-2xl font-semibold text-foreground">Stock-Out</h1>
       <StockOutForm items={items} />
 

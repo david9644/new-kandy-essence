@@ -15,12 +15,12 @@ export default async function PurchasesPage() {
     .limit(100);
 
   return (
-    <div>
+    <div className="border-t-[3px] border-t-accent-purchases pt-3">
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-foreground">Purchases</h1>
         <Link
           href="/purchases/new"
-          className="flex h-11 items-center rounded-lg bg-primary px-5 text-sm font-medium text-primary-foreground active:opacity-90"
+          className="flex h-11 items-center rounded-lg bg-accent-purchases px-5 text-sm font-medium text-accent-purchases-foreground active:opacity-90"
         >
           + New Purchase
         </Link>

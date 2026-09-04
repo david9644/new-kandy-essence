@@ -38,7 +38,7 @@ export default async function StockOverviewPage() {
   });
 
   return (
-    <div>
+    <div className="border-t-[3px] border-t-accent-stock pt-3">
       <StockRealtimeRefresh />
       <h1 className="mb-4 text-2xl font-semibold text-foreground">Stock Overview</h1>
       <StockOverviewTable rows={rows} />

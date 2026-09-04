@@ -28,7 +28,7 @@ export default async function NewPurchasePage() {
   }));
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div className="mx-auto max-w-2xl border-t-[3px] border-t-accent-purchases pt-3">
       <h1 className="mb-4 text-2xl font-semibold text-foreground">New Purchase</h1>
       <PurchaseForm
         suppliers={suppliers ?? []}

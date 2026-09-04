@@ -1,15 +1,20 @@
-import Link from "next/link";
 import { requireProfile } from "@/lib/auth/session";
 import { LogoutButton } from "@/components/shared/logout-button";
 import { MoreNavMenu } from "@/components/shared/more-nav-menu";
+import { PrimaryNav, type NavAccent } from "@/components/shared/primary-nav";
 
-const PRIMARY_NAV_ITEMS: Array<{ href: string; label: string; ownerOnly?: boolean }> = [
+const PRIMARY_NAV_ITEMS: Array<{
+  href: string;
+  label: string;
+  ownerOnly?: boolean;
+  accent?: NavAccent;
+}> = [
   { href: "/dashboard", label: "Dashboard" },
-  { href: "/purchases", label: "Purchases" },
-  { href: "/stock/out", label: "Stock-Out" },
-  { href: "/stock", label: "Stock" },
+  { href: "/purchases", label: "Purchases", accent: "purchases" },
+  { href: "/stock/out", label: "Stock-Out", accent: "stock" },
+  { href: "/stock", label: "Stock", accent: "stock" },
   { href: "/suppliers", label: "Suppliers" },
-  { href: "/cheques", label: "Cheques", ownerOnly: true },
+  { href: "/cheques", label: "Cheques", ownerOnly: true, accent: "cheques" },
   { href: "/reports", label: "Reports" },
 ];
 
@@ -48,15 +53,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <LogoutButton />
         </div>
         <nav className="flex flex-wrap gap-2 px-4 pb-3">
-          {visiblePrimaryItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="flex min-h-[44px] items-center rounded-lg border border-border bg-background px-4 text-sm font-medium text-foreground active:bg-border"
-            >
-              {item.label}
-            </Link>
-          ))}
+          <PrimaryNav items={visiblePrimaryItems} />
           <MoreNavMenu items={visibleMoreItems} />
         </nav>
       </header>

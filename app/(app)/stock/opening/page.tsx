@@ -31,7 +31,7 @@ export default async function OpeningStockPage() {
   }));
 
   return (
-    <div className="mx-auto max-w-lg">
+    <div className="mx-auto max-w-lg border-t-[3px] border-t-accent-stock pt-3">
       <h1 className="mb-1 text-2xl font-semibold text-foreground">Opening Stock Entry</h1>
       <p className="mb-4 text-sm text-muted">
         For go-live data entry from your manual books, or adding a found batch. Creates a stock

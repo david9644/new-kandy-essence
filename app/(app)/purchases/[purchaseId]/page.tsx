@@ -42,7 +42,7 @@ export default async function PurchaseDetailPage({
   const canEditHeader = profile.role === "owner" || purchase.date === todayIso();
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div className="mx-auto max-w-2xl border-t-[3px] border-t-accent-purchases pt-3">
       <div className="mb-4 flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-foreground">Purchase #{purchase.purchase_no}</h1>

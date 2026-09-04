@@ -16,7 +16,7 @@ export default async function ChequesPage() {
     .order("cheque_date", { ascending: false });
 
   return (
-    <div>
+    <div className="border-t-[3px] border-t-accent-cheques pt-3">
       <h1 className="mb-1 text-2xl font-semibold text-foreground">Cheque Register</h1>
       <p className="mb-4 text-sm text-muted">
         Every cheque issued to a supplier, from purchases and payments alike. A bounced cheque

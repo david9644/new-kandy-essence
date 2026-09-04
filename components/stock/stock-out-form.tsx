@@ -194,7 +194,7 @@ export function StockOutForm({ items }: { items: ItemOption[] }) {
                 disabled={pending || !quantity || Number(quantity) <= 0}
                 onClick={submit}
                 className={`flex h-14 w-full items-center justify-center rounded-xl text-lg font-semibold text-white disabled:opacity-50 ${
-                  needsConfirm ? "bg-warning" : "bg-primary"
+                  needsConfirm ? "bg-warning" : "bg-accent-stock"
                 }`}
               >
                 {pending

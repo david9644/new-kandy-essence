@@ -35,7 +35,7 @@ export default async function StockBatchesPage({
   const activeBatches = (batches ?? []).filter((b) => b.quantity_remaining !== 0);
 
   return (
-    <div>
+    <div className="border-t-[3px] border-t-accent-stock pt-3">
       <StockRealtimeRefresh />
       <h1 className="text-2xl font-semibold text-foreground">{item.name}</h1>
       <p className="mb-4 text-sm text-muted">

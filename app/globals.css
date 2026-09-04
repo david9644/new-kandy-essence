@@ -6,7 +6,7 @@
   --foreground: #0f172a;
   --muted: #64748b;
   --border: #e2e8f0;
-  --primary: #1d4ed8;
+  --primary: #2563a8;
   --primary-foreground: #ffffff;
   --danger: #dc2626;
   --danger-surface: #fef2f2;
@@ -14,6 +14,16 @@
   --warning-surface: #fffbeb;
   --success: #15803d;
   --success-surface: #f0fdf4;
+  /* Section accents, drawn from the New Kandy Essence Suppliers logo (brand
+     blue + deep red). Used sparingly: the active nav tab, one primary
+     action button per section, and a thin top-border strip on that
+     section's pages -- not a full-app repaint. */
+  --accent-purchases: #b0201c;
+  --accent-purchases-foreground: #ffffff;
+  --accent-stock: #1e7a4c;
+  --accent-stock-foreground: #ffffff;
+  --accent-cheques: #b4790a;
+  --accent-cheques-foreground: #ffffff;
 }
 
 @theme inline {
@@ -30,6 +40,12 @@
   --color-warning-surface: var(--warning-surface);
   --color-success: var(--success);
   --color-success-surface: var(--success-surface);
+  --color-accent-purchases: var(--accent-purchases);
+  --color-accent-purchases-foreground: var(--accent-purchases-foreground);
+  --color-accent-stock: var(--accent-stock);
+  --color-accent-stock-foreground: var(--accent-stock-foreground);
+  --color-accent-cheques: var(--accent-cheques);
+  --color-accent-cheques-foreground: var(--accent-cheques-foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }

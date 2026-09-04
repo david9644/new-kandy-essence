@@ -19,7 +19,7 @@ export default async function StockAdjustmentsPage() {
   ]);
 
   return (
-    <div className="mx-auto max-w-lg">
+    <div className="mx-auto max-w-lg border-t-[3px] border-t-accent-stock pt-3">
       <h1 className="mb-1 text-2xl font-semibold text-foreground">Stock Adjustment</h1>
       <p className="mb-4 text-sm text-muted">
         Correct a count -- damage, wastage, or a miscount found during the manual-to-digital

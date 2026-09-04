@@ -262,7 +262,7 @@ export function PurchaseForm({
       <button
         type="submit"
         disabled={pending}
-        className="flex h-14 w-full items-center justify-center rounded-xl bg-primary text-lg font-semibold text-primary-foreground disabled:opacity-50"
+        className="flex h-14 w-full items-center justify-center rounded-xl bg-accent-purchases text-lg font-semibold text-accent-purchases-foreground disabled:opacity-50"
       >
         {pending ? "Saving..." : "Save Purchase"}
       </button>

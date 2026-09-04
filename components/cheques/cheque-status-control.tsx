@@ -33,7 +33,7 @@ export function ChequeStatusControl({
           router.refresh();
         })
       }
-      className={`h-9 rounded-full border px-3 text-xs font-medium capitalize disabled:opacity-50 ${STATUS_STYLES[status]}`}
+      className={`h-9 rounded-full border px-3 text-xs font-medium capitalize focus:outline-none focus:ring-2 focus:ring-accent-cheques disabled:opacity-50 ${STATUS_STYLES[status]}`}
     >
       <option value="pending">Pending</option>
       <option value="cleared">Cleared</option>
