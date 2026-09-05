@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { formatCurrency, formatQuantity } from "@/lib/units";
 import { EditOpeningStockForm } from "@/components/stock/edit-opening-stock-form";
 import { ConfirmDeleteButton } from "@/components/shared/confirm-delete-button";
+import { BackButton } from "@/components/shared/back-button";
 import { deleteOpeningStock } from "@/app/(app)/stock/opening/actions";
 
 export default async function OpeningStockDetailPage({
@@ -39,6 +40,7 @@ export default async function OpeningStockDetailPage({
 
   return (
     <div className="mx-auto max-w-lg border-t-[3px] border-t-accent-stock pt-3">
+      <BackButton href="/stock/opening" />
       <div className="mb-4 flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-foreground">{item?.name}</h1>

@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { formatCurrency, formatQuantity } from "@/lib/units";
 import { NEAR_EXPIRY_DAYS, BUSINESS_TIMEZONE } from "@/lib/constants";
 import { StockRealtimeRefresh } from "@/components/stock/stock-realtime-refresh";
+import { BackButton } from "@/components/shared/back-button";
 
 function daysUntil(dateStr: string): number {
   const today = new Date(new Date().toLocaleDateString("en-CA", { timeZone: BUSINESS_TIMEZONE }));
@@ -37,6 +38,7 @@ export default async function StockBatchesPage({
   return (
     <div className="border-t-[3px] border-t-accent-stock pt-3">
       <StockRealtimeRefresh />
+      <BackButton href="/stock" />
       <h1 className="text-2xl font-semibold text-foreground">{item.name}</h1>
       <p className="mb-4 text-sm text-muted">
         {item.code} &middot; Base unit: {item.base_unit}

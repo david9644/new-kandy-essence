@@ -1,6 +1,7 @@
 import { requireOwner } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { PrintLayout } from "@/components/shared/print-layout";
+import { BackButton } from "@/components/shared/back-button";
 import { formatCurrency } from "@/lib/units";
 
 function monthStartIso(): string {
@@ -37,7 +38,9 @@ export default async function SupplierReportPage({
   );
 
   return (
-    <PrintLayout title="Supplier-wise Report" subtitle={`${fromDate} to ${toDate}`}>
+    <>
+      <BackButton href="/reports" />
+      <PrintLayout title="Supplier-wise Report" subtitle={`${fromDate} to ${toDate}`}>
       <form method="get" className="mb-4 flex flex-wrap items-end gap-3 print:hidden">
         <div>
           <label className="mb-1 block text-xs font-medium text-muted">From</label>
@@ -99,6 +102,7 @@ export default async function SupplierReportPage({
           <p className="font-semibold text-foreground">{formatCurrency(totals.payments)}</p>
         </div>
       </div>
-    </PrintLayout>
+      </PrintLayout>
+    </>
   );
 }

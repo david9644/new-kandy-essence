@@ -1,6 +1,7 @@
 import { requireProfile } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { PurchaseForm } from "@/components/purchases/purchase-form";
+import { BackButton } from "@/components/shared/back-button";
 
 export default async function NewPurchasePage() {
   await requireProfile();
@@ -29,6 +30,7 @@ export default async function NewPurchasePage() {
 
   return (
     <div className="mx-auto max-w-2xl border-t-[3px] border-t-accent-purchases pt-3">
+      <BackButton href="/purchases" />
       <h1 className="mb-4 text-2xl font-semibold text-foreground">New Purchase</h1>
       <PurchaseForm
         suppliers={suppliers ?? []}

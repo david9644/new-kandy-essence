@@ -1,6 +1,7 @@
 import { requireProfile } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { PrintLayout } from "@/components/shared/print-layout";
+import { BackButton } from "@/components/shared/back-button";
 import { formatCurrency, formatQuantity } from "@/lib/units";
 
 function monthStartIso(): string {
@@ -102,8 +103,10 @@ export default async function PurchaseReportPage({
     const total = (lines ?? []).reduce((sum, l) => sum + l.line_total, 0);
 
     return (
-      <PrintLayout title="Purchase Report" subtitle={`${fromDate} to ${toDate}`}>
-        {filterForm}
+      <>
+        <BackButton href="/reports" />
+        <PrintLayout title="Purchase Report" subtitle={`${fromDate} to ${toDate}`}>
+          {filterForm}
         <table className="w-full text-left text-sm">
           <thead className="border-b border-border text-xs uppercase text-muted print:border-black">
             <tr>
@@ -148,7 +151,8 @@ export default async function PurchaseReportPage({
           <p className="font-semibold text-foreground">Total</p>
           <p className="font-semibold text-foreground">{formatCurrency(total)}</p>
         </div>
-      </PrintLayout>
+        </PrintLayout>
+      </>
     );
   }
 
@@ -163,8 +167,10 @@ export default async function PurchaseReportPage({
   const total = (purchases ?? []).reduce((sum, p) => sum + p.total_amount, 0);
 
   return (
-    <PrintLayout title="Purchase Report" subtitle={`${fromDate} to ${toDate}`}>
-      {filterForm}
+    <>
+      <BackButton href="/reports" />
+      <PrintLayout title="Purchase Report" subtitle={`${fromDate} to ${toDate}`}>
+        {filterForm}
       <table className="w-full text-left text-sm">
         <thead className="border-b border-border text-xs uppercase text-muted print:border-black">
           <tr>
@@ -198,6 +204,7 @@ export default async function PurchaseReportPage({
         <p className="font-semibold text-foreground">Total</p>
         <p className="font-semibold text-foreground">{formatCurrency(total)}</p>
       </div>
-    </PrintLayout>
+      </PrintLayout>
+    </>
   );
 }

@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { formatQuantity } from "@/lib/units";
 import { EditStockAdjustmentForm } from "@/components/stock/edit-stock-adjustment-form";
 import { ConfirmDeleteButton } from "@/components/shared/confirm-delete-button";
+import { BackButton } from "@/components/shared/back-button";
 import { deleteStockAdjustment } from "@/app/(app)/stock/adjustments/actions";
 
 export default async function StockAdjustmentDetailPage({
@@ -30,6 +31,7 @@ export default async function StockAdjustmentDetailPage({
 
   return (
     <div className="mx-auto max-w-lg border-t-[3px] border-t-accent-stock pt-3">
+      <BackButton href="/stock/adjustments" />
       <div className="mb-4 flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-foreground">{item?.name}</h1>

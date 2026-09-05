@@ -15,6 +15,7 @@ const PRIMARY_NAV_ITEMS: Array<{
   { href: "/stock/out", label: "Stock-Out", accent: "stock" },
   { href: "/stock", label: "Stock", accent: "stock" },
   { href: "/suppliers", label: "Suppliers" },
+  { href: "/customers", label: "Customers", ownerOnly: true },
   { href: "/cheques", label: "Cheques", ownerOnly: true, accent: "cheques" },
   { href: "/reports", label: "Reports" },
 ];
@@ -28,7 +29,6 @@ const MORE_NAV_ITEMS: Array<{ href: string; label: string; ownerOnly?: boolean }
   { href: "/items", label: "Items" },
   { href: "/stock/opening", label: "Opening Stock", ownerOnly: true },
   { href: "/stock/adjustments", label: "Adjustments", ownerOnly: true },
-  { href: "/customers", label: "Customers", ownerOnly: true },
   { href: "/users", label: "Users", ownerOnly: true },
   { href: "/settings", label: "Settings", ownerOnly: true },
 ];

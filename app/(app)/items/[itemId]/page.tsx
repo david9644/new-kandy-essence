@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { ItemForm } from "@/components/items/item-form";
 import { updateItem, setItemActive } from "@/app/(app)/items/actions";
 import { ActiveToggleButton } from "@/components/items/active-toggle-button";
+import { BackButton } from "@/components/shared/back-button";
 import { formatCurrency } from "@/lib/units";
 
 export default async function ItemDetailPage({
@@ -31,6 +32,7 @@ export default async function ItemDetailPage({
 
   return (
     <div className="mx-auto max-w-lg">
+      <BackButton href="/items" />
       <div className="mb-4 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-foreground">{item.name}</h1>

@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { formatCurrency, formatQuantity } from "@/lib/units";
 import { PurchaseHeaderEditForm } from "@/components/purchases/purchase-header-edit-form";
 import { DeletePurchaseButton } from "@/components/purchases/delete-purchase-button";
+import { BackButton } from "@/components/shared/back-button";
 
 function todayIso(): string {
   return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Colombo" });
@@ -43,6 +44,7 @@ export default async function PurchaseDetailPage({
 
   return (
     <div className="mx-auto max-w-2xl border-t-[3px] border-t-accent-purchases pt-3">
+      <BackButton href="/purchases" />
       <div className="mb-4 flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-foreground">Purchase #{purchase.purchase_no}</h1>

@@ -7,6 +7,7 @@ import { EditSupplierModalButton } from "@/components/suppliers/edit-supplier-mo
 import { AddPaymentModalButton } from "@/components/payments/add-payment-modal-button";
 import { LedgerTable, type LedgerRow, type PaymentDetail } from "@/components/suppliers/ledger-table";
 import { updateSupplier, setSupplierActive } from "@/app/(app)/suppliers/actions";
+import { BackButton } from "@/components/shared/back-button";
 
 function monthStartIso(): string {
   const now = new Date();
@@ -88,6 +89,7 @@ export default async function SupplierDetailPage({
 
   return (
     <div className="mx-auto max-w-2xl">
+      <BackButton href="/suppliers" />
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold text-foreground">{supplier.name}</h1>

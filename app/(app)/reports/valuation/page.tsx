@@ -1,6 +1,7 @@
 import { requireProfile } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { PrintLayout } from "@/components/shared/print-layout";
+import { BackButton } from "@/components/shared/back-button";
 import { formatCurrency, formatQuantity } from "@/lib/units";
 
 export default async function StockValuationReportPage() {
@@ -30,7 +31,9 @@ export default async function StockValuationReportPage() {
   const grandTotal = (batches ?? []).reduce((sum, b) => sum + b.quantity_remaining * b.unit_cost, 0);
 
   return (
-    <PrintLayout title="Stock Valuation Report" subtitle="Current stock, batch-wise breakdown">
+    <>
+      <BackButton href="/reports" />
+      <PrintLayout title="Stock Valuation Report" subtitle="Current stock, batch-wise breakdown">
       {groups.map((group) => {
         const itemQty = group.rows!.reduce((s, b) => s + b.quantity_remaining, 0);
         const itemValue = group.rows!.reduce((s, b) => s + b.quantity_remaining * b.unit_cost, 0);
@@ -70,6 +73,7 @@ export default async function StockValuationReportPage() {
         <p className="font-semibold text-foreground">Grand Total</p>
         <p className="font-semibold text-foreground">{formatCurrency(grandTotal)}</p>
       </div>
-    </PrintLayout>
+      </PrintLayout>
+    </>
   );
 }

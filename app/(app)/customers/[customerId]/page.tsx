@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { formatCurrency } from "@/lib/units";
 import { CustomerDetailActions } from "@/components/customers/customer-detail-actions";
 import { CustomerLedgerTable, type LedgerRow } from "@/components/customers/customer-ledger-table";
+import { BackButton } from "@/components/shared/back-button";
 
 function monthStartIso(): string {
   const now = new Date();
@@ -79,6 +80,7 @@ export default async function CustomerDetailPage({
 
   return (
     <div className="mx-auto max-w-2xl">
+      <BackButton href="/customers" />
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold text-foreground">{customer.name}</h1>

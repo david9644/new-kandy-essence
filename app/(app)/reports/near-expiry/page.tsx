@@ -2,6 +2,7 @@ import { requireProfile } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { getNearExpiryBatches } from "@/lib/stock/alerts";
 import { PrintLayout } from "@/components/shared/print-layout";
+import { BackButton } from "@/components/shared/back-button";
 import { formatQuantity } from "@/lib/units";
 import { NEAR_EXPIRY_DAYS } from "@/lib/constants";
 
@@ -11,10 +12,12 @@ export default async function NearExpiryReportPage() {
   const rows = await getNearExpiryBatches(supabase);
 
   return (
-    <PrintLayout
-      title="Near-Expiry Report"
-      subtitle={`${rows.length} batch(es) expiring within ${NEAR_EXPIRY_DAYS} days`}
-    >
+    <>
+      <BackButton href="/reports" />
+      <PrintLayout
+        title="Near-Expiry Report"
+        subtitle={`${rows.length} batch(es) expiring within ${NEAR_EXPIRY_DAYS} days`}
+      >
       <table className="w-full text-left text-sm">
         <thead className="border-b border-border text-xs uppercase text-muted print:border-black">
           <tr>
@@ -50,6 +53,7 @@ export default async function NearExpiryReportPage() {
           )}
         </tbody>
       </table>
-    </PrintLayout>
+      </PrintLayout>
+    </>
   );
 }

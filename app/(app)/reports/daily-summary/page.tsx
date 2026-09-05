@@ -2,6 +2,7 @@ import { requireProfile } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { getLowStockItems, getNearExpiryBatches, todayInBusinessTz } from "@/lib/stock/alerts";
 import { PrintLayout } from "@/components/shared/print-layout";
+import { BackButton } from "@/components/shared/back-button";
 import { formatCurrency, formatQuantity } from "@/lib/units";
 
 export default async function DailySummaryReportPage() {
@@ -22,7 +23,9 @@ export default async function DailySummaryReportPage() {
   const purchaseTotal = (purchases ?? []).reduce((sum, p) => sum + p.total_amount, 0);
 
   return (
-    <PrintLayout title="Daily Summary" subtitle={today}>
+    <>
+      <BackButton href="/reports" />
+      <PrintLayout title="Daily Summary" subtitle={today}>
       <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
         <div className="rounded-lg bg-background p-3 print:border print:border-gray-300">
           <p className="text-xs text-muted">Purchases Today</p>
@@ -78,6 +81,7 @@ export default async function DailySummaryReportPage() {
           )}
         </tbody>
       </table>
-    </PrintLayout>
+      </PrintLayout>
+    </>
   );
 }

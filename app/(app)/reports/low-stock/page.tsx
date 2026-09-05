@@ -2,6 +2,7 @@ import { requireProfile } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { getLowStockItems } from "@/lib/stock/alerts";
 import { PrintLayout } from "@/components/shared/print-layout";
+import { BackButton } from "@/components/shared/back-button";
 import { formatQuantity } from "@/lib/units";
 
 export default async function LowStockReportPage() {
@@ -10,7 +11,9 @@ export default async function LowStockReportPage() {
   const rows = await getLowStockItems(supabase);
 
   return (
-    <PrintLayout title="Low Stock Report" subtitle={`${rows.length} item(s) at or below reorder level`}>
+    <>
+      <BackButton href="/reports" />
+      <PrintLayout title="Low Stock Report" subtitle={`${rows.length} item(s) at or below reorder level`}>
       <table className="w-full text-left text-sm">
         <thead className="border-b border-border text-xs uppercase text-muted print:border-black">
           <tr>
@@ -46,6 +49,7 @@ export default async function LowStockReportPage() {
           )}
         </tbody>
       </table>
-    </PrintLayout>
+      </PrintLayout>
+    </>
   );
 }
