@@ -1,4 +1,5 @@
 import { requireProfile } from "@/lib/auth/session";
+import { AppFooter } from "@/components/shared/app-footer";
 import { LogoutButton } from "@/components/shared/logout-button";
 import { MoreNavMenu } from "@/components/shared/more-nav-menu";
 import { PrimaryNav, type NavAccent } from "@/components/shared/primary-nav";
@@ -60,6 +61,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       </header>
 
       <main className="p-4">{children}</main>
+
+      <AppFooter />
     </div>
   );
 }

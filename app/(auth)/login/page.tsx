@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { NumericKeypad, type NumericKey } from "@/components/NumericKeypad";
+import { AppFooter } from "@/components/shared/app-footer";
 
 const MAX_PIN_LENGTH = 6;
 
@@ -87,6 +88,8 @@ export default function LoginPage() {
         >
           {submitting ? "Checking..." : "Log In"}
         </button>
+
+        <AppFooter variant="prominent" />
       </div>
     </div>
   );
