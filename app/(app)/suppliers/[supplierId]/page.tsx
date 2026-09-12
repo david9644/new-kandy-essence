@@ -9,9 +9,10 @@ import { LedgerTable, type LedgerRow, type PaymentDetail } from "@/components/su
 import { updateSupplier, setSupplierActive } from "@/app/(app)/suppliers/actions";
 import { BackButton } from "@/components/shared/back-button";
 
-function monthStartIso(): string {
+function threeMonthsAgoIso(): string {
   const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth(), 1).toLocaleDateString("en-CA");
+  return new Date(now.getFullYear(), now.getMonth() - 3, now.getDate())
+    .toLocaleDateString("en-CA");
 }
 
 function todayIso(): string {
@@ -27,7 +28,7 @@ export default async function SupplierDetailPage({
 }) {
   const { supplierId } = await params;
   const { from, to } = await searchParams;
-  const fromDate = from || monthStartIso();
+  const fromDate = from || threeMonthsAgoIso();
   const toDate = to || todayIso();
 
   const profile = await requireProfile();

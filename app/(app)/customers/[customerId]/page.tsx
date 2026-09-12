@@ -6,9 +6,10 @@ import { CustomerDetailActions } from "@/components/customers/customer-detail-ac
 import { CustomerLedgerTable, type LedgerRow } from "@/components/customers/customer-ledger-table";
 import { BackButton } from "@/components/shared/back-button";
 
-function monthStartIso(): string {
+function threeMonthsAgoIso(): string {
   const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth(), 1).toLocaleDateString("en-CA");
+  return new Date(now.getFullYear(), now.getMonth() - 3, now.getDate())
+    .toLocaleDateString("en-CA");
 }
 
 function todayIso(): string {
@@ -24,7 +25,7 @@ export default async function CustomerDetailPage({
 }) {
   const { customerId } = await params;
   const { from, to } = await searchParams;
-  const fromDate = from || monthStartIso();
+  const fromDate = from || threeMonthsAgoIso();
   const toDate = to || todayIso();
 
   await requireOwner();
