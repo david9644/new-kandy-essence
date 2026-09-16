@@ -55,7 +55,11 @@ export function CustomersTable({
                     {c.code}
                   </Link>
                 </td>
-                <td className="px-4 py-3 text-foreground">{c.name}</td>
+                <td className="px-4 py-3">
+                  <Link href={`/customers/${c.id}`} className="font-medium text-primary">
+                    {c.name}
+                  </Link>
+                </td>
                 <td className="px-4 py-3 text-muted">{c.contact ?? "-"}</td>
                 <td className="px-4 py-3 text-right tabular-nums text-foreground">
                   {formatCurrency(balanceByCustomer.get(c.id) ?? 0)}
