@@ -674,6 +674,54 @@ export type Database = {
           },
         ]
       }
+      salary_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          date: string
+          id: string
+          notes: string | null
+          period: string | null
+          worker_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          date?: string
+          id?: string
+          notes?: string | null
+          period?: string | null
+          worker_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          date?: string
+          id?: string
+          notes?: string | null
+          period?: string | null
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "salary_payments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_payments_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stock_adjustments: {
         Row: {
           created_at: string
@@ -995,6 +1043,63 @@ export type Database = {
           },
         ]
       }
+      workers: {
+        Row: {
+          active: boolean
+          code: string
+          contact: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          monthly_salary: number | null
+          name: string
+          position: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          contact?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          monthly_salary?: number | null
+          name: string
+          position?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          contact?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          monthly_salary?: number | null
+          name?: string
+          position?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workers_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workers_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       item_stock_summary: {
@@ -1057,6 +1162,16 @@ export type Database = {
         }
         Returns: string
       }
+      create_salary_payment: {
+        Args: {
+          p_amount: number
+          p_date: string
+          p_notes: string
+          p_period: string
+          p_worker_id: string
+        }
+        Returns: string
+      }
       create_stock_adjustment: {
         Args: {
           p_date: string
@@ -1101,6 +1216,10 @@ export type Database = {
       }
       delete_opening_stock: { Args: { p_entry_id: string }; Returns: undefined }
       delete_purchase: { Args: { p_purchase_id: string }; Returns: undefined }
+      delete_salary_payment: {
+        Args: { p_payment_id: string }
+        Returns: undefined
+      }
       delete_stock_adjustment: {
         Args: { p_adjustment_id: string }
         Returns: undefined
@@ -1183,6 +1302,16 @@ export type Database = {
           supplier_id: string
         }[]
       }
+      get_worker_payment_history: {
+        Args: { p_worker_id: string }
+        Returns: {
+          amount: number
+          date: string
+          id: string
+          notes: string
+          period: string
+        }[]
+      }
       is_owner: { Args: never; Returns: boolean }
       stock_out_apply_fefo: {
         Args: { p_base_qty: number; p_item_id: string; p_stock_out_id: string }
@@ -1235,6 +1364,16 @@ export type Database = {
           p_notes: string
           p_purchase_id: string
           p_reference_no: string
+        }
+        Returns: undefined
+      }
+      update_salary_payment: {
+        Args: {
+          p_amount: number
+          p_date: string
+          p_notes: string
+          p_payment_id: string
+          p_period: string
         }
         Returns: undefined
       }
