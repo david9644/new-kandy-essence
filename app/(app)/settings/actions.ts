@@ -23,3 +23,14 @@ export async function setBankAccountActive(id: string, active: boolean) {
   revalidatePath("/settings");
   return { ok: true };
 }
+
+export async function updateAppSettings(dailyChequeLimit: number) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("app_settings")
+    .update({ daily_cheque_limit: dailyChequeLimit })
+    .eq("id", true);
+  if (error) return { error: error.message };
+  revalidatePath("/settings");
+  return { ok: true };
+}

@@ -1,22 +1,40 @@
 import { requireOwner } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { AddNameForm } from "@/components/settings/add-name-form";
+import { DailyChequeLimitForm } from "@/components/settings/daily-cheque-limit-form";
 import { ActiveToggleButton } from "@/components/items/active-toggle-button";
 import { createCategory } from "@/app/(app)/items/actions";
-import { createBankAccount, setBankAccountActive } from "@/app/(app)/settings/actions";
+import {
+  createBankAccount,
+  setBankAccountActive,
+  updateAppSettings,
+} from "@/app/(app)/settings/actions";
 
 export default async function SettingsPage() {
   await requireOwner();
   const supabase = await createClient();
 
-  const [{ data: categories }, { data: bankAccounts }] = await Promise.all([
+  const [{ data: categories }, { data: bankAccounts }, { data: appSettings }] = await Promise.all([
     supabase.from("categories").select("id, name").order("name"),
     supabase.from("bank_accounts").select("id, name, active").order("name"),
+    supabase.from("app_settings").select("daily_cheque_limit").eq("id", true).maybeSingle(),
   ]);
 
   return (
     <div className="mx-auto flex max-w-lg flex-col gap-8">
       <h1 className="text-2xl font-semibold text-foreground">Settings</h1>
+
+      <section>
+        <h2 className="mb-3 text-lg font-medium text-foreground">Daily Cheque Limit</h2>
+        <p className="mb-3 text-sm text-muted">
+          Warns (without blocking) when a new cheque would push a single day&rsquo;s total
+          cheques over this amount.
+        </p>
+        <DailyChequeLimitForm
+          initial={appSettings?.daily_cheque_limit ?? 0}
+          onSubmit={updateAppSettings}
+        />
+      </section>
 
       <section>
         <h2 className="mb-3 text-lg font-medium text-foreground">Item Categories</h2>

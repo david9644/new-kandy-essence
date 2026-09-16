@@ -5,6 +5,7 @@ import type { ChequeInput } from "@/app/(app)/purchases/actions";
 import { formatCurrency } from "@/lib/units";
 import { KeyboardNumberInput } from "@/components/keyboard/keyboard-number-input";
 import { QuickAddBankModal } from "@/components/settings/quick-add-bank-modal";
+import { createClient } from "@/lib/supabase/client";
 
 export interface BankAccountOption {
   id: string;
@@ -27,11 +28,47 @@ export function ChequeFields({
 }) {
   const [accounts, setAccounts] = useState(bankAccounts);
   const [quickAddBank, setQuickAddBank] = useState(false);
+  const [dailyLimit, setDailyLimit] = useState(0);
+  const [existingTotal, setExistingTotal] = useState(0);
 
   useEffect(() => {
     onChange({ ...value, amount });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [amount]);
+
+  // Daily Cheque Limit setting -- loaded once; 0 means no limit is set, in
+  // which case the warning below never renders.
+  useEffect(() => {
+    const supabase = createClient();
+    supabase
+      .from("app_settings")
+      .select("daily_cheque_limit")
+      .eq("id", true)
+      .maybeSingle()
+      .then(({ data }) => setDailyLimit(data?.daily_cheque_limit ?? 0));
+  }, []);
+
+  // Re-fetches the running total for whatever date is currently selected.
+  // Cash-flow-safety warning only -- this intentionally doesn't exclude the
+  // cheque being edited (if any) from that date's total, so editing an
+  // existing cheque without changing its date/amount can show a harmless
+  // false-positive warning; it never blocks saving either way.
+  useEffect(() => {
+    if (!value.cheque_date) return;
+    let cancelled = false;
+    const supabase = createClient();
+    supabase
+      .rpc("get_cheques_total_for_date", { p_date: value.cheque_date })
+      .then(({ data }) => {
+        if (!cancelled) setExistingTotal(data ?? 0);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [value.cheque_date]);
+
+  const projectedTotal = existingTotal + amount;
+  const overDailyLimit = Boolean(value.cheque_date) && dailyLimit > 0 && projectedTotal > dailyLimit;
 
   return (
     <div className="mb-4 flex flex-col gap-3 rounded-lg border border-border bg-background p-3">
@@ -85,6 +122,12 @@ export function ChequeFields({
           {formatCurrency(amount)}
         </div>
       </div>
+      {overDailyLimit && (
+        <p className="rounded-lg bg-warning-surface px-3 py-2 text-sm text-warning">
+          Cheques dated {value.cheque_date} would total {formatCurrency(projectedTotal)} — over
+          your {formatCurrency(dailyLimit)} daily limit.
+        </p>
+      )}
       {quickAddBank && (
         <QuickAddBankModal
           onClose={() => setQuickAddBank(false)}

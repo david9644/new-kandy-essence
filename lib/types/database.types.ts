@@ -14,6 +14,21 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_settings: {
+        Row: {
+          daily_cheque_limit: number
+          id: boolean
+        }
+        Insert: {
+          daily_cheque_limit?: number
+          id?: boolean
+        }
+        Update: {
+          daily_cheque_limit?: number
+          id?: boolean
+        }
+        Relationships: []
+      }
       bank_accounts: {
         Row: {
           active: boolean
@@ -1229,6 +1244,7 @@ export type Database = {
         Args: { p_payment_id: string }
         Returns: undefined
       }
+      get_cheques_total_for_date: { Args: { p_date: string }; Returns: number }
       get_customer_balance: { Args: { p_customer_id: string }; Returns: number }
       get_customer_balances: {
         Args: never
