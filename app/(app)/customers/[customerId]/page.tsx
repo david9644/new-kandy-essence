@@ -5,6 +5,7 @@ import { formatCurrency } from "@/lib/units";
 import { CustomerDetailActions } from "@/components/customers/customer-detail-actions";
 import { CustomerLedgerTable, type LedgerRow } from "@/components/customers/customer-ledger-table";
 import { BackButton } from "@/components/shared/back-button";
+import { PrintLayout } from "@/components/shared/print-layout";
 
 function threeMonthsAgoIso(): string {
   const now = new Date();
@@ -86,7 +87,7 @@ export default async function CustomerDetailPage({
   return (
     <div className="mx-auto max-w-2xl">
       <BackButton href="/customers" />
-      <div className="mb-4 flex items-start justify-between gap-3">
+      <div className="mb-4 flex items-start justify-between gap-3 print:hidden">
         <div>
           <h1 className="text-2xl font-semibold text-foreground">{customer.name}</h1>
           <p className="text-sm text-muted">{customer.code}</p>
@@ -103,18 +104,7 @@ export default async function CustomerDetailPage({
         />
       </div>
 
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className="rounded-xl border border-border bg-surface p-4">
-          <p className="text-sm text-muted">Current Outstanding Balance</p>
-          <p className="text-3xl font-semibold text-foreground">{formatCurrency(balance)}</p>
-        </div>
-        <div className="rounded-xl border border-border bg-surface p-4">
-          <p className="text-sm text-muted">Total Credit Given</p>
-          <p className="text-3xl font-semibold text-foreground">{formatCurrency(totalCredit)}</p>
-        </div>
-      </div>
-
-      <form method="get" className="mb-4 flex flex-wrap items-end gap-3">
+      <form method="get" className="mb-4 flex flex-wrap items-end gap-3 print:hidden">
         <div>
           <label className="mb-1 block text-xs font-medium text-muted">From</label>
           <input
@@ -141,7 +131,20 @@ export default async function CustomerDetailPage({
         </button>
       </form>
 
-      <CustomerLedgerTable rows={ledgerRows} customerId={customerId} />
+      <PrintLayout title={customer.name} subtitle={`${customer.code} · Customer Statement`}>
+        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="rounded-xl border border-border bg-surface p-4">
+            <p className="text-sm text-muted">Current Outstanding Balance</p>
+            <p className="text-3xl font-semibold text-foreground">{formatCurrency(balance)}</p>
+          </div>
+          <div className="rounded-xl border border-border bg-surface p-4">
+            <p className="text-sm text-muted">Total Credit Given</p>
+            <p className="text-3xl font-semibold text-foreground">{formatCurrency(totalCredit)}</p>
+          </div>
+        </div>
+
+        <CustomerLedgerTable rows={ledgerRows} customerId={customerId} />
+      </PrintLayout>
     </div>
   );
 }
