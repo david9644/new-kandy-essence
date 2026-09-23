@@ -39,7 +39,6 @@ export default async function CustomerDetailPage({
     { data: ledger },
     { data: credits },
     { data: payments },
-    { data: allCredits },
   ] = await Promise.all([
     supabase.from("customers").select("*").eq("id", customerId).maybeSingle(),
     supabase
@@ -65,8 +64,6 @@ export default async function CustomerDetailPage({
       .eq("customer_id", customerId)
       .gte("date", fromDate)
       .lte("date", toDate),
-    // All-time, independent of the From/To filter -- same as the balance tile.
-    supabase.from("customer_credits").select("amount").eq("customer_id", customerId),
   ]);
 
   if (!customer) notFound();
@@ -82,7 +79,6 @@ export default async function CustomerDetailPage({
   }));
 
   const balance = balanceData ?? 0;
-  const totalCredit = (allCredits ?? []).reduce((sum, c) => sum + c.amount, 0);
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -132,15 +128,9 @@ export default async function CustomerDetailPage({
       </form>
 
       <PrintLayout title={customer.name} subtitle={`${customer.code} · Customer Statement`}>
-        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="rounded-xl border border-border bg-surface p-4">
-            <p className="text-sm text-muted">Current Outstanding Balance</p>
-            <p className="text-3xl font-semibold text-foreground">{formatCurrency(balance)}</p>
-          </div>
-          <div className="rounded-xl border border-border bg-surface p-4">
-            <p className="text-sm text-muted">Total Credit Given</p>
-            <p className="text-3xl font-semibold text-foreground">{formatCurrency(totalCredit)}</p>
-          </div>
+        <div className="mb-6 rounded-xl border border-border bg-surface p-4">
+          <p className="text-sm text-muted">Current Outstanding Balance</p>
+          <p className="text-3xl font-semibold text-foreground">{formatCurrency(balance)}</p>
         </div>
 
         <CustomerLedgerTable rows={ledgerRows} customerId={customerId} />

@@ -1,25 +1,20 @@
 import Link from "next/link";
 import { requireOwner } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
-import { formatCurrency } from "@/lib/units";
 import { CustomersTable } from "@/components/customers/customers-table";
 
 export default async function CustomersPage() {
   await requireOwner();
   const supabase = await createClient();
 
-  const [{ data: customers }, { data: balances }, { data: allCredits }] = await Promise.all([
+  const [{ data: customers }, { data: balances }] = await Promise.all([
     supabase.from("customers").select("id, code, name, contact").order("name"),
     supabase.rpc("get_customer_balances"),
-    // All-time, across every customer -- not filtered to any one customer_id.
-    supabase.from("customer_credits").select("amount"),
   ]);
 
   const balanceByCustomer = new Map(
     (balances ?? []).map((b) => [b.customer_id, b.current_balance])
   );
-
-  const totalCreditGiven = (allCredits ?? []).reduce((sum, c) => sum + c.amount, 0);
 
   return (
     <div>
@@ -31,11 +26,6 @@ export default async function CustomersPage() {
         >
           + New Customer
         </Link>
-      </div>
-
-      <div className="mb-6 rounded-xl border border-border bg-surface p-4">
-        <p className="text-sm text-muted">Total Credit Given</p>
-        <p className="text-3xl font-semibold text-foreground">{formatCurrency(totalCreditGiven)}</p>
       </div>
 
       <CustomersTable customers={customers ?? []} balanceByCustomer={balanceByCustomer} />
