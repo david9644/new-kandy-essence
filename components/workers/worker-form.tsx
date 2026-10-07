@@ -11,12 +11,20 @@ interface WorkerFormProps {
   submitLabel: string;
 }
 
+function firstOfCurrentMonth(): string {
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Colombo" });
+  return `${today.slice(0, 7)}-01`;
+}
+
 export function WorkerForm({ initial, onSubmit, submitLabel }: WorkerFormProps) {
   const [name, setName] = useState(initial?.name ?? "");
   const [contact, setContact] = useState(initial?.contact ?? "");
   const [position, setPosition] = useState(initial?.position ?? "");
   const [monthlySalary, setMonthlySalary] = useState(
     initial?.monthly_salary != null ? String(initial.monthly_salary) : ""
+  );
+  const [salaryStartDate, setSalaryStartDate] = useState(
+    initial ? initial.salary_start_date : firstOfCurrentMonth()
   );
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -27,6 +35,7 @@ export function WorkerForm({ initial, onSubmit, submitLabel }: WorkerFormProps) 
     setContact("");
     setPosition("");
     setMonthlySalary("");
+    setSalaryStartDate(firstOfCurrentMonth());
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -42,6 +51,7 @@ export function WorkerForm({ initial, onSubmit, submitLabel }: WorkerFormProps) 
         contact,
         position,
         monthly_salary: monthlySalary.trim() ? Number(monthlySalary) : null,
+        salary_start_date: salaryStartDate,
       });
       if (result?.error) {
         setError(result.error);
@@ -104,7 +114,22 @@ export function WorkerForm({ initial, onSubmit, submitLabel }: WorkerFormProps) 
           className="w-full rounded-lg border border-border bg-surface px-4 py-3 text-base text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
         />
         <p className="mt-1 text-xs text-muted">
-          Optional, for reference only -- not used in any calculation.
+          Added to what&rsquo;s owed every month. Leave empty to skip balance tracking.
+        </p>
+      </div>
+
+      <div>
+        <label className="mb-1.5 block text-sm font-medium text-foreground">
+          Salary starts from
+        </label>
+        <input
+          type="date"
+          value={salaryStartDate}
+          onChange={(e) => setSalaryStartDate(e.target.value)}
+          className="w-full rounded-lg border border-border bg-surface px-4 py-3 text-base text-foreground focus:border-primary focus:outline-none"
+        />
+        <p className="mt-1 text-xs text-muted">
+          The month salary starts building up. That whole month counts.
         </p>
       </div>
 

@@ -1069,6 +1069,8 @@ export type Database = {
           monthly_salary: number | null
           name: string
           position: string | null
+          salary_end_date: string | null
+          salary_start_date: string | null
           updated_at: string
           updated_by: string | null
         }
@@ -1082,6 +1084,8 @@ export type Database = {
           monthly_salary?: number | null
           name: string
           position?: string | null
+          salary_end_date?: string | null
+          salary_start_date?: string | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -1095,6 +1099,8 @@ export type Database = {
           monthly_salary?: number | null
           name?: string
           position?: string | null
+          salary_end_date?: string | null
+          salary_start_date?: string | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -1316,6 +1322,23 @@ export type Database = {
           payments_total: number
           purchases_total: number
           supplier_id: string
+        }[]
+      }
+      get_worker_balance: { Args: { p_worker_id: string }; Returns: number }
+      get_worker_balances: {
+        Args: never
+        Returns: {
+          balance: number
+          worker_id: string
+        }[]
+      }
+      get_worker_monthly_breakdown: {
+        Args: { p_worker_id: string }
+        Returns: {
+          month: string
+          paid: number
+          running_balance: number
+          salary: number
         }[]
       }
       get_worker_payment_history: {

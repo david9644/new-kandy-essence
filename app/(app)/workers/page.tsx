@@ -7,14 +7,17 @@ export default async function WorkersPage() {
   await requireOwner();
   const supabase = await createClient();
 
-  const [{ data: workers }, { data: payments }] = await Promise.all([
-    supabase.from("workers").select("id, code, name, position").order("name"),
+  const [{ data: workers }, { data: payments }, { data: balances }] = await Promise.all([
+    supabase.from("workers").select("id, code, name, position, monthly_salary").order("name"),
     supabase
       .from("salary_payments")
       .select("worker_id, date, period, created_at")
       .order("date", { ascending: false })
       .order("created_at", { ascending: false }),
+    supabase.rpc("get_worker_balances"),
   ]);
+
+  const balanceByWorker = new Map((balances ?? []).map((b) => [b.worker_id, b.balance]));
 
   const lastPaidByWorker = new Map<string, LastPaid>();
   for (const p of payments ?? []) {
@@ -34,7 +37,11 @@ export default async function WorkersPage() {
           + New Worker
         </Link>
       </div>
-      <WorkersTable workers={workers ?? []} lastPaidByWorker={lastPaidByWorker} />
+      <WorkersTable
+        workers={workers ?? []}
+        lastPaidByWorker={lastPaidByWorker}
+        balanceByWorker={balanceByWorker}
+      />
     </div>
   );
 }

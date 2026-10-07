@@ -2,7 +2,6 @@
 
 import { useState, useTransition } from "react";
 import type { SalaryPaymentInput } from "@/app/(app)/workers/actions";
-import { KeyboardTextInput } from "@/components/keyboard/keyboard-text-input";
 import { KeyboardNumberInput } from "@/components/keyboard/keyboard-number-input";
 import { KeyboardTextArea } from "@/components/keyboard/keyboard-textarea";
 
@@ -26,7 +25,6 @@ export function SalaryPaymentForm({
   successMessage,
 }: SalaryPaymentFormProps) {
   const [date, setDate] = useState(initial?.date ?? todayIso());
-  const [period, setPeriod] = useState(initial?.period ?? "");
   const [amount, setAmount] = useState(String(initial?.amount ?? ""));
   const [notes, setNotes] = useState(initial?.notes ?? "");
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +33,6 @@ export function SalaryPaymentForm({
 
   function reset() {
     setDate(todayIso());
-    setPeriod("");
     setAmount("");
     setNotes("");
   }
@@ -48,7 +45,9 @@ export function SalaryPaymentForm({
     startTransition(async () => {
       const result = await onSubmit({
         date,
-        period,
+        // No longer entered -- the month comes from the date. Editing an old
+        // row passes its existing text straight through so it isn't wiped.
+        period: initial?.period ?? "",
         amount: Number(amount) || 0,
         notes,
       });
@@ -90,16 +89,6 @@ export function SalaryPaymentForm({
             className="w-full rounded-lg border border-border bg-surface px-4 py-3 text-right text-base tabular-nums text-foreground focus:border-primary focus:outline-none"
           />
         </div>
-      </div>
-
-      <div>
-        <label className="mb-1.5 block text-sm font-medium text-foreground">Period</label>
-        <KeyboardTextInput
-          value={period}
-          onChange={setPeriod}
-          placeholder="e.g. September 2026"
-          className="w-full rounded-lg border border-border bg-surface px-4 py-3 text-base text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-        />
       </div>
 
       <div>

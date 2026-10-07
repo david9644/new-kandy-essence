@@ -8,6 +8,13 @@ export interface WorkerInput {
   contact: string;
   position: string;
   monthly_salary: number | null;
+  /** YYYY-MM-DD; salary accrues from this date's month. Empty falls back to
+   * the worker's created_at month inside the balance functions. */
+  salary_start_date: string;
+}
+
+function todayInColombo(): string {
+  return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Colombo" });
 }
 
 function validateWorker(input: WorkerInput): string | null {
@@ -29,6 +36,7 @@ export async function createWorker(input: WorkerInput) {
       contact: input.contact.trim() || null,
       position: input.position.trim() || null,
       monthly_salary: input.monthly_salary,
+      salary_start_date: input.salary_start_date || null,
     })
     .select("id, code")
     .single();
@@ -54,6 +62,7 @@ export async function updateWorker(workerId: string, input: WorkerInput) {
       contact: input.contact.trim() || null,
       position: input.position.trim() || null,
       monthly_salary: input.monthly_salary,
+      salary_start_date: input.salary_start_date || null,
     })
     .eq("id", workerId);
 
@@ -64,9 +73,14 @@ export async function updateWorker(workerId: string, input: WorkerInput) {
   return { ok: true };
 }
 
+// Deactivating stamps salary_end_date (today, Asia/Colombo) so salary stops
+// accruing after that month; reactivating clears it so accrual resumes.
 export async function setWorkerActive(workerId: string, active: boolean) {
   const supabase = await createClient();
-  const { error } = await supabase.from("workers").update({ active }).eq("id", workerId);
+  const { error } = await supabase
+    .from("workers")
+    .update({ active, salary_end_date: active ? null : todayInColombo() })
+    .eq("id", workerId);
   if (error) return { error: error.message };
   revalidatePath("/workers");
   revalidatePath(`/workers/${workerId}`);
@@ -75,6 +89,8 @@ export async function setWorkerActive(workerId: string, active: boolean) {
 
 export interface SalaryPaymentInput {
   date: string;
+  /** Legacy free-text label. No longer entered or shown (a payment's month
+   * comes from its date); kept only so editing an old row doesn't wipe it. */
   period: string;
   amount: number;
   notes: string;

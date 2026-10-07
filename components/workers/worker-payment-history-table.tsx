@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Modal } from "@/components/shared/modal";
 import { formatCurrency } from "@/lib/units";
 import { SalaryPaymentForm } from "@/components/workers/salary-payment-form";
+import { formatMonth } from "@/components/workers/format-month";
 import { ConfirmDeleteButton } from "@/components/shared/confirm-delete-button";
 import { updateSalaryPayment, deleteSalaryPayment } from "@/app/(app)/workers/actions";
 
@@ -40,7 +41,7 @@ export function WorkerPaymentHistoryTable({
           <thead className="bg-background text-xs uppercase text-muted">
             <tr>
               <th className="px-4 py-3">Date</th>
-              <th className="px-4 py-3">Period</th>
+              <th className="px-4 py-3">Month</th>
               <th className="px-4 py-3 text-right">Amount</th>
               <th className="px-4 py-3">Notes</th>
             </tr>
@@ -54,7 +55,7 @@ export function WorkerPaymentHistoryTable({
               >
                 <td className="px-4 py-3 text-foreground">{row.date}</td>
                 <td className="px-4 py-3">
-                  <span className="font-medium text-primary">{row.period || "-"}</span>
+                  <span className="font-medium text-primary">{formatMonth(row.date)}</span>
                 </td>
                 <td className="px-4 py-3 text-right tabular-nums text-foreground">
                   {formatCurrency(row.amount)}
@@ -76,8 +77,7 @@ export function WorkerPaymentHistoryTable({
       {activeRow && (
         <Modal open onClose={close} title={formatCurrency(activeRow.amount)}>
           <p className="mb-4 text-sm text-muted">
-            {activeRow.date}
-            {activeRow.period ? ` · ${activeRow.period}` : ""}
+            {activeRow.date} &middot; {formatMonth(activeRow.date)}
           </p>
 
           <div className="mb-4 flex justify-end">
