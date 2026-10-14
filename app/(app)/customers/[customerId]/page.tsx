@@ -7,14 +7,20 @@ import { CustomerLedgerTable, type LedgerRow } from "@/components/customers/cust
 import { BackButton } from "@/components/shared/back-button";
 import { PrintLayout } from "@/components/shared/print-layout";
 
-function threeMonthsAgoIso(): string {
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth() - 3, now.getDate())
-    .toLocaleDateString("en-CA");
-}
-
 function todayIso(): string {
   return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Colombo" });
+}
+
+// Same month/day one year back, from the Asia/Colombo "today". Built in UTC so
+// the viewer's/server's timezone can't shift the date; Feb 29 has no match a
+// year earlier, so it clamps to the last day of that month (Feb 28).
+function oneYearAgoIso(): string {
+  const [year, month, day] = todayIso().split("-").map(Number);
+  const lastDayOfMonth = new Date(Date.UTC(year - 1, month, 0)).getUTCDate();
+  return new Date(Date.UTC(year - 1, month - 1, Math.min(day, lastDayOfMonth))).toLocaleDateString(
+    "en-CA",
+    { timeZone: "UTC" }
+  );
 }
 
 export default async function CustomerDetailPage({
@@ -26,7 +32,7 @@ export default async function CustomerDetailPage({
 }) {
   const { customerId } = await params;
   const { from, to } = await searchParams;
-  const fromDate = from || threeMonthsAgoIso();
+  const fromDate = from || oneYearAgoIso();
   const toDate = to || todayIso();
 
   await requireOwner();
