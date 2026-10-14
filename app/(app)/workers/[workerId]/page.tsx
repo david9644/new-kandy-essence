@@ -82,9 +82,10 @@ export default async function WorkerDetailPage({
             </div>
 
             <h2 className="mb-2 text-lg font-medium text-foreground">Monthly Breakdown</h2>
-            <div className="mb-6">
-              <WorkerMonthlyBreakdownTable rows={breakdown ?? []} />
-            </div>
+            <WorkerMonthlyBreakdownTable rows={breakdown ?? []} />
+            <p className="mb-6 mt-2 text-xs text-muted">
+              A month&rsquo;s salary is added on the last day of that month.
+            </p>
           </>
         ) : (
           <p className="mb-6 rounded-lg bg-background px-3 py-2 text-sm text-muted">
