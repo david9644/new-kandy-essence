@@ -32,6 +32,9 @@ export interface LedgerRow {
   debit: number;
   credit: number;
   running_balance: number;
+  // Real amount of a cash purchase (entry_type "cash_purchase"); null on every
+  // other row. Information only -- never part of debit/credit/balance.
+  info_amount?: number | null;
   paymentDetail?: PaymentDetail;
 }
 
@@ -70,7 +73,8 @@ export function LedgerTable({
           <tbody>
             {rows.map((row) => {
               const isPayment = row.entry_type === "payment" && row.paymentDetail;
-              const isPurchase = row.entry_type === "purchase";
+              const isCashPurchase = row.entry_type === "cash_purchase";
+              const isPurchase = row.entry_type === "purchase" || isCashPurchase;
               const clickable = isPayment || isPurchase;
               function handleClick() {
                 if (isPayment) setOpenId(row.entry_id);
@@ -90,6 +94,11 @@ export function LedgerTable({
                       <span className="font-medium text-primary">{row.reference}</span>
                     ) : (
                       row.reference
+                    )}
+                    {isCashPurchase && row.info_amount != null && (
+                      <span className="block text-xs font-normal text-muted">
+                        Paid in cash &middot; {formatCurrency(row.info_amount)} (not in balance)
+                      </span>
                     )}
                   </td>
                   <td className="px-4 py-3 text-right tabular-nums text-foreground">

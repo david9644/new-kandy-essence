@@ -1309,6 +1309,7 @@ export type Database = {
           entry_date: string
           entry_id: string
           entry_type: string
+          info_amount: number
           reference: string
           running_balance: number
         }[]
