@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { formatCurrency, formatQuantity } from "@/lib/units";
 import { PurchaseHeaderEditForm } from "@/components/purchases/purchase-header-edit-form";
 import { DeletePurchaseButton } from "@/components/purchases/delete-purchase-button";
+import { DeletePurchaseLineButton } from "@/components/purchases/delete-purchase-line-button";
 import { BackButton } from "@/components/shared/back-button";
 
 function todayIso(): string {
@@ -40,7 +41,8 @@ export default async function PurchaseDetailPage({
     | { cheque_number: string; cheque_date: string; status: string; bank_accounts: { name: string } | null }
     | null;
 
-  const canEditHeader = profile.role === "owner" || purchase.date === todayIso();
+  const isOwner = profile.role === "owner";
+  const canEditHeader = isOwner || purchase.date === todayIso();
 
   return (
     <div className="mx-auto max-w-2xl border-t-[3px] border-t-accent-purchases pt-3">
@@ -109,6 +111,7 @@ export default async function PurchaseDetailPage({
               <th className="px-4 py-3 text-right">Qty</th>
               <th className="px-4 py-3 text-right">Unit Cost</th>
               <th className="px-4 py-3 text-right">Line Total</th>
+              {isOwner && <th className="px-4 py-3" />}
             </tr>
           </thead>
           <tbody>
@@ -128,6 +131,17 @@ export default async function PurchaseDetailPage({
                   <td className="px-4 py-3 text-right tabular-nums text-foreground">
                     {formatCurrency(line.line_total)}
                   </td>
+                  {isOwner && (
+                    <td className="px-4 py-3 text-right align-top">
+                      {(lines ?? []).length > 1 ? (
+                        <DeletePurchaseLineButton purchaseItemId={line.id} purchaseId={purchase.id} />
+                      ) : (
+                        <p className="ml-auto max-w-[12rem] text-xs text-muted">
+                          Only line &mdash; delete the whole purchase instead.
+                        </p>
+                      )}
+                    </td>
+                  )}
                 </tr>
               );
             })}

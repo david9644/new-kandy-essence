@@ -125,3 +125,33 @@ export async function deletePurchase(purchaseId: string, deletePin: string) {
   revalidatePath("/stock");
   redirect("/purchases");
 }
+
+// Deletes ONE line from an existing purchase (owner only, Delete PIN every
+// time). The RPC recalculates the purchase total (and a pending cheque's
+// amount) and removes the line's stock batch; it refuses -- with a plain
+// message -- if that stock was already used, if it's the purchase's only
+// line, or if the cheque can't be adjusted. Stays on the purchase page.
+export async function deletePurchaseItem(
+  purchaseItemId: string,
+  purchaseId: string,
+  deletePin: string
+) {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("delete_purchase_item", {
+    p_purchase_item_id: purchaseItemId,
+    p_delete_pin: deletePin,
+  });
+  const failure = deleteFailure(data, error);
+  if (failure) return failure;
+
+  const supplierId = (data as { supplier_id?: string } | null)?.supplier_id;
+
+  revalidatePath("/purchases");
+  revalidatePath(`/purchases/${purchaseId}`);
+  revalidatePath("/stock");
+  revalidatePath("/items");
+  revalidatePath("/cheques");
+  revalidatePath("/suppliers");
+  if (supplierId) revalidatePath(`/suppliers/${supplierId}`);
+  return { ok: true };
+}

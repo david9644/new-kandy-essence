@@ -1247,6 +1247,10 @@ export type Database = {
         Args: { p_delete_pin: string; p_purchase_id: string }
         Returns: Json
       }
+      delete_purchase_item: {
+        Args: { p_delete_pin: string; p_purchase_item_id: string }
+        Returns: Json
+      }
       delete_salary_payment: {
         Args: { p_delete_pin: string; p_payment_id: string }
         Returns: Json
