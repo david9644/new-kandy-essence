@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { deleteFailure } from "@/lib/delete-pin";
 
 export interface CustomerInput {
   name: string;
@@ -135,10 +136,14 @@ export async function updateCustomerCredit(
   return { ok: true };
 }
 
-export async function deleteCustomerCredit(creditId: string, customerId: string) {
+export async function deleteCustomerCredit(creditId: string, customerId: string, deletePin: string) {
   const supabase = await createClient();
-  const { error } = await supabase.rpc("delete_customer_credit", { p_credit_id: creditId });
-  if (error) return { error: error.message };
+  const { data, error } = await supabase.rpc("delete_customer_credit", {
+    p_credit_id: creditId,
+    p_delete_pin: deletePin,
+  });
+  const failure = deleteFailure(data, error);
+  if (failure) return failure;
   revalidatePath(`/customers/${customerId}`);
   revalidatePath("/customers");
   return { ok: true };
@@ -186,10 +191,14 @@ export async function updateCustomerPayment(
   return { ok: true };
 }
 
-export async function deleteCustomerPayment(paymentId: string, customerId: string) {
+export async function deleteCustomerPayment(paymentId: string, customerId: string, deletePin: string) {
   const supabase = await createClient();
-  const { error } = await supabase.rpc("delete_customer_payment", { p_payment_id: paymentId });
-  if (error) return { error: error.message };
+  const { data, error } = await supabase.rpc("delete_customer_payment", {
+    p_payment_id: paymentId,
+    p_delete_pin: deletePin,
+  });
+  const failure = deleteFailure(data, error);
+  if (failure) return failure;
   revalidatePath(`/customers/${customerId}`);
   revalidatePath("/customers");
   return { ok: true };

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { deleteFailure } from "@/lib/delete-pin";
 
 export interface StockOutInput {
   item_id: string;
@@ -57,10 +58,14 @@ export async function updateStockOut(stockOutId: string, input: UpdateStockOutIn
   return { ok: true };
 }
 
-export async function deleteStockOut(stockOutId: string) {
+export async function deleteStockOut(stockOutId: string, deletePin: string) {
   const supabase = await createClient();
-  const { error } = await supabase.rpc("delete_stock_out", { p_stock_out_id: stockOutId });
-  if (error) return { error: error.message };
+  const { data, error } = await supabase.rpc("delete_stock_out", {
+    p_stock_out_id: stockOutId,
+    p_delete_pin: deletePin,
+  });
+  const failure = deleteFailure(data, error);
+  if (failure) return failure;
 
   revalidatePath("/stock");
   revalidatePath("/stock/out");

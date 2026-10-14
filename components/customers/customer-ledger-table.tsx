@@ -97,12 +97,12 @@ export function CustomerLedgerTable({ rows, customerId }: { rows: LedgerRow[]; c
           <div className="mb-4 flex justify-end">
             <ConfirmDeleteButton
               label={activeRow.entry_type === "credit" ? "Delete Credit" : "Delete Payment"}
-              onDelete={async () => {
+              onDelete={async (pin) => {
                 const result =
                   activeRow.entry_type === "credit"
-                    ? await deleteCustomerCredit(activeRow.entry_id, customerId)
-                    : await deleteCustomerPayment(activeRow.entry_id, customerId);
-                if (!result?.error) close();
+                    ? await deleteCustomerCredit(activeRow.entry_id, customerId, pin)
+                    : await deleteCustomerPayment(activeRow.entry_id, customerId, pin);
+                if (!("error" in result)) close();
                 return result;
               }}
             />

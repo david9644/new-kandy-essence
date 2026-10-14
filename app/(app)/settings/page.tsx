@@ -2,27 +2,45 @@ import { requireOwner } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { AddNameForm } from "@/components/settings/add-name-form";
 import { DailyChequeLimitForm } from "@/components/settings/daily-cheque-limit-form";
+import { DeletePinForm } from "@/components/settings/delete-pin-form";
 import { ActiveToggleButton } from "@/components/items/active-toggle-button";
 import { createCategory } from "@/app/(app)/items/actions";
 import {
   createBankAccount,
   setBankAccountActive,
   updateAppSettings,
+  setDeletePin,
+  resetDeletePin,
 } from "@/app/(app)/settings/actions";
 
 export default async function SettingsPage() {
   await requireOwner();
   const supabase = await createClient();
 
-  const [{ data: categories }, { data: bankAccounts }, { data: appSettings }] = await Promise.all([
-    supabase.from("categories").select("id, name").order("name"),
-    supabase.from("bank_accounts").select("id, name, active").order("name"),
-    supabase.from("app_settings").select("daily_cheque_limit").eq("id", true).maybeSingle(),
-  ]);
+  const [{ data: categories }, { data: bankAccounts }, { data: appSettings }, { data: hasPin }] =
+    await Promise.all([
+      supabase.from("categories").select("id, name").order("name"),
+      supabase.from("bank_accounts").select("id, name, active").order("name"),
+      supabase.from("app_settings").select("daily_cheque_limit").eq("id", true).maybeSingle(),
+      supabase.rpc("has_delete_pin"),
+    ]);
 
   return (
     <div className="mx-auto flex max-w-lg flex-col gap-8">
       <h1 className="text-2xl font-semibold text-foreground">Settings</h1>
+
+      <section>
+        <h2 className="mb-3 text-lg font-medium text-foreground">Delete PIN</h2>
+        <p className="mb-3 text-sm text-muted">
+          A separate PIN (not your login PIN) that must be entered for every delete. Only you can
+          set it or use it.
+        </p>
+        <DeletePinForm
+          hasPin={hasPin === true}
+          onSetPin={setDeletePin}
+          onResetPin={resetDeletePin}
+        />
+      </section>
 
       <section>
         <h2 className="mb-3 text-lg font-medium text-foreground">Daily Cheque Limit</h2>

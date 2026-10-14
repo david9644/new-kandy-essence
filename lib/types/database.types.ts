@@ -1141,6 +1141,10 @@ export type Database = {
       }
     }
     Functions: {
+      admin_reset_delete_pin: {
+        Args: { p_new_pin: string; p_owner_id: string }
+        Returns: undefined
+      }
       create_customer_credit: {
         Args: {
           p_amount: number
@@ -1228,27 +1232,36 @@ export type Database = {
         Returns: Database["public"]["Enums"]["user_role"]
       }
       delete_customer_credit: {
-        Args: { p_credit_id: string }
-        Returns: undefined
+        Args: { p_credit_id: string; p_delete_pin: string }
+        Returns: Json
       }
       delete_customer_payment: {
-        Args: { p_payment_id: string }
-        Returns: undefined
+        Args: { p_delete_pin: string; p_payment_id: string }
+        Returns: Json
       }
-      delete_opening_stock: { Args: { p_entry_id: string }; Returns: undefined }
-      delete_purchase: { Args: { p_purchase_id: string }; Returns: undefined }
+      delete_opening_stock: {
+        Args: { p_delete_pin: string; p_entry_id: string }
+        Returns: Json
+      }
+      delete_purchase: {
+        Args: { p_delete_pin: string; p_purchase_id: string }
+        Returns: Json
+      }
       delete_salary_payment: {
-        Args: { p_payment_id: string }
-        Returns: undefined
+        Args: { p_delete_pin: string; p_payment_id: string }
+        Returns: Json
       }
       delete_stock_adjustment: {
-        Args: { p_adjustment_id: string }
-        Returns: undefined
+        Args: { p_adjustment_id: string; p_delete_pin: string }
+        Returns: Json
       }
-      delete_stock_out: { Args: { p_stock_out_id: string }; Returns: undefined }
+      delete_stock_out: {
+        Args: { p_delete_pin: string; p_stock_out_id: string }
+        Returns: Json
+      }
       delete_supplier_payment: {
-        Args: { p_payment_id: string }
-        Returns: undefined
+        Args: { p_delete_pin: string; p_payment_id: string }
+        Returns: Json
       }
       get_cheques_total_for_date: { Args: { p_date: string }; Returns: number }
       get_customer_balance: { Args: { p_customer_id: string }; Returns: number }
@@ -1352,13 +1365,14 @@ export type Database = {
           period: string
         }[]
       }
+      has_delete_pin: { Args: never; Returns: boolean }
       is_owner: { Args: never; Returns: boolean }
+      set_delete_pin: {
+        Args: { p_current_pin?: string; p_new_pin: string }
+        Returns: Json
+      }
       stock_out_apply_fefo: {
         Args: { p_base_qty: number; p_item_id: string; p_stock_out_id: string }
-        Returns: undefined
-      }
-      stock_out_reverse: {
-        Args: { p_stock_out_id: string }
         Returns: undefined
       }
       update_cheque_status: {

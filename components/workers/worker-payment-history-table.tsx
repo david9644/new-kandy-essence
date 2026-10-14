@@ -83,9 +83,9 @@ export function WorkerPaymentHistoryTable({
           <div className="mb-4 flex justify-end">
             <ConfirmDeleteButton
               label="Delete Payment"
-              onDelete={async () => {
-                const result = await deleteSalaryPayment(activeRow.id, workerId);
-                if (!result?.error) close();
+              onDelete={async (pin) => {
+                const result = await deleteSalaryPayment(activeRow.id, workerId, pin);
+                if (!("error" in result)) close();
                 return result;
               }}
             />

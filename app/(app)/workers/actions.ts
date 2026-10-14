@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { deleteFailure } from "@/lib/delete-pin";
 
 export interface WorkerInput {
   name: string;
@@ -145,10 +146,14 @@ export async function updateSalaryPayment(
   return { ok: true };
 }
 
-export async function deleteSalaryPayment(paymentId: string, workerId: string) {
+export async function deleteSalaryPayment(paymentId: string, workerId: string, deletePin: string) {
   const supabase = await createClient();
-  const { error } = await supabase.rpc("delete_salary_payment", { p_payment_id: paymentId });
-  if (error) return { error: error.message };
+  const { data, error } = await supabase.rpc("delete_salary_payment", {
+    p_payment_id: paymentId,
+    p_delete_pin: deletePin,
+  });
+  const failure = deleteFailure(data, error);
+  if (failure) return failure;
   revalidatePath(`/workers/${workerId}`);
   revalidatePath("/workers");
   return { ok: true };

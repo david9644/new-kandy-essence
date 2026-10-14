@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { deleteFailure } from "@/lib/delete-pin";
 import type { Database } from "@/lib/types/database.types";
 
 export interface PaymentChequeInput {
@@ -101,10 +102,14 @@ export async function updateSupplierPayment(paymentId: string, input: UpdateSupp
 // supplierId is only used to revalidate that supplier's ledger page --
 // deleting a payment can't move it to a different supplier either, same as
 // updateSupplierPayment above.
-export async function deleteSupplierPayment(paymentId: string, supplierId: string) {
+export async function deleteSupplierPayment(paymentId: string, supplierId: string, deletePin: string) {
   const supabase = await createClient();
-  const { error } = await supabase.rpc("delete_supplier_payment", { p_payment_id: paymentId });
-  if (error) return { error: error.message };
+  const { data, error } = await supabase.rpc("delete_supplier_payment", {
+    p_payment_id: paymentId,
+    p_delete_pin: deletePin,
+  });
+  const failure = deleteFailure(data, error);
+  if (failure) return failure;
 
   revalidatePath(`/suppliers/${supplierId}`);
   revalidatePath("/cheques");

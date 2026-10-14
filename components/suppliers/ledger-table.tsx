@@ -139,9 +139,9 @@ export function LedgerTable({
           <div className="mb-4 flex justify-end">
             <ConfirmDeleteButton
               label="Delete Payment"
-              onDelete={async () => {
-                const result = await deleteSupplierPayment(activeRow.entry_id, supplierId);
-                if (!result?.error) close();
+              onDelete={async (pin) => {
+                const result = await deleteSupplierPayment(activeRow.entry_id, supplierId, pin);
+                if (!("error" in result)) close();
                 return result;
               }}
             />

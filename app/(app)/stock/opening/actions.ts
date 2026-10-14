@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { deleteFailure } from "@/lib/delete-pin";
 
 export interface OpeningStockInput {
   item_id: string;
@@ -69,10 +70,14 @@ export async function updateOpeningStock(entryId: string, input: UpdateOpeningSt
   return { ok: true };
 }
 
-export async function deleteOpeningStock(entryId: string) {
+export async function deleteOpeningStock(entryId: string, deletePin: string) {
   const supabase = await createClient();
-  const { error } = await supabase.rpc("delete_opening_stock", { p_entry_id: entryId });
-  if (error) return { error: error.message };
+  const { data, error } = await supabase.rpc("delete_opening_stock", {
+    p_entry_id: entryId,
+    p_delete_pin: deletePin,
+  });
+  const failure = deleteFailure(data, error);
+  if (failure) return failure;
 
   revalidatePath("/stock");
   revalidatePath("/stock/opening");

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { deleteFailure } from "@/lib/delete-pin";
 import type { Database } from "@/lib/types/database.types";
 
 export interface PurchaseLineInput {
@@ -111,10 +112,14 @@ export async function updatePurchaseHeader(
   return { ok: true };
 }
 
-export async function deletePurchase(purchaseId: string) {
+export async function deletePurchase(purchaseId: string, deletePin: string) {
   const supabase = await createClient();
-  const { error } = await supabase.rpc("delete_purchase", { p_purchase_id: purchaseId });
-  if (error) return { error: error.message };
+  const { data, error } = await supabase.rpc("delete_purchase", {
+    p_purchase_id: purchaseId,
+    p_delete_pin: deletePin,
+  });
+  const failure = deleteFailure(data, error);
+  if (failure) return failure;
 
   revalidatePath("/purchases");
   revalidatePath("/stock");
