@@ -3,6 +3,7 @@ import { AppFooter } from "@/components/shared/app-footer";
 import { LogoutButton } from "@/components/shared/logout-button";
 import { MoreNavMenu } from "@/components/shared/more-nav-menu";
 import { PrimaryNav, type NavAccent } from "@/components/shared/primary-nav";
+import { HeaderHeightVar } from "@/components/shared/header-height-var";
 
 const PRIMARY_NAV_ITEMS: Array<{
   href: string;
@@ -11,6 +12,7 @@ const PRIMARY_NAV_ITEMS: Array<{
   accent?: NavAccent;
 }> = [
   { href: "/dashboard", label: "Dashboard" },
+  { href: "/billing", label: "Billing" },
   { href: "/purchases", label: "Purchases", accent: "purchases" },
   { href: "/stock/out", label: "Stock-Out", accent: "stock" },
   { href: "/stock", label: "Stock", accent: "stock" },
@@ -45,6 +47,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="min-h-screen bg-background">
+      <HeaderHeightVar />
       <header className="sticky top-0 z-30 border-b border-border bg-surface print:hidden">
         <div className="flex items-center justify-between gap-3 px-4 py-3">
           <div>

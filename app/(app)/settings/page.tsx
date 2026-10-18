@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { AddNameForm } from "@/components/settings/add-name-form";
 import { DailyChequeLimitForm } from "@/components/settings/daily-cheque-limit-form";
 import { DeletePinForm } from "@/components/settings/delete-pin-form";
+import { BusinessDetailsForm } from "@/components/settings/business-details-form";
 import { ActiveToggleButton } from "@/components/items/active-toggle-button";
 import { createCategory } from "@/app/(app)/items/actions";
 import {
@@ -11,6 +12,7 @@ import {
   updateAppSettings,
   setDeletePin,
   resetDeletePin,
+  updateBusinessDetails,
 } from "@/app/(app)/settings/actions";
 
 export default async function SettingsPage() {
@@ -21,7 +23,11 @@ export default async function SettingsPage() {
     await Promise.all([
       supabase.from("categories").select("id, name").order("name"),
       supabase.from("bank_accounts").select("id, name, active").order("name"),
-      supabase.from("app_settings").select("daily_cheque_limit").eq("id", true).maybeSingle(),
+      supabase
+        .from("app_settings")
+        .select("daily_cheque_limit, business_name, business_address, business_phone1, business_phone2")
+        .eq("id", true)
+        .maybeSingle(),
       supabase.rpc("has_delete_pin"),
     ]);
 
@@ -39,6 +45,22 @@ export default async function SettingsPage() {
           hasPin={hasPin === true}
           onSetPin={setDeletePin}
           onResetPin={resetDeletePin}
+        />
+      </section>
+
+      <section>
+        <h2 className="mb-3 text-lg font-medium text-foreground">Business Details</h2>
+        <p className="mb-3 text-sm text-muted">
+          Shown in the header of every bill: business name, address and up to two phone numbers.
+        </p>
+        <BusinessDetailsForm
+          initial={{
+            name: appSettings?.business_name ?? "",
+            address: appSettings?.business_address ?? "",
+            phone1: appSettings?.business_phone1 ?? "",
+            phone2: appSettings?.business_phone2 ?? "",
+          }}
+          onSubmit={updateBusinessDetails}
         />
       </section>
 

@@ -15,6 +15,7 @@ export default async function DailySummaryReportPage() {
     supabase
       .from("stock_out")
       .select("id, quantity, unit_name, items(name)")
+      .is("invoice_id", null)
       .eq("date", today),
     getLowStockItems(supabase),
     getNearExpiryBatches(supabase),

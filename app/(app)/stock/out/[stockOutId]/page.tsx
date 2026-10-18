@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { formatQuantity } from "@/lib/units";
 import { EditStockOutForm } from "@/components/stock/edit-stock-out-form";
 import { ConfirmDeleteButton } from "@/components/shared/confirm-delete-button";
+import Link from "next/link";
 import { BackButton } from "@/components/shared/back-button";
 import { deleteStockOut } from "@/app/(app)/stock/out/actions";
 
@@ -30,6 +31,17 @@ export default async function StockOutDetailPage({
 
   if (!stockOut) notFound();
 
+  // Stock-outs created by a bill belong to that bill: change them by editing
+  // or deleting the bill (the database refuses direct edits anyway).
+  const { data: bill } = stockOut.invoice_id
+    ? await supabase
+        .from("invoices")
+        .select("id, invoice_no")
+        .eq("id", stockOut.invoice_id)
+        .maybeSingle()
+    : { data: null };
+  const fromBill = stockOut.invoice_id !== null;
+
   const item = stockOut.items as {
     name: string;
     code: string;
@@ -51,7 +63,7 @@ export default async function StockOutDetailPage({
             {item?.code} &middot; {stockOut.date}
           </p>
         </div>
-        {profile.role === "owner" && (
+        {profile.role === "owner" && !fromBill && (
           <ConfirmDeleteButton
             label="Delete Stock-Out"
             onDelete={deleteStockOut.bind(null, stockOut.id)}
@@ -87,7 +99,20 @@ export default async function StockOutDetailPage({
         </div>
       )}
 
-      {profile.role === "owner" && (
+      {fromBill && (
+        <p className="mb-6 rounded-lg bg-background px-3 py-2 text-sm text-muted">
+          This stock-out was created by a bill
+          {bill ? (
+            <>
+              {" "}
+              (<Link href={`/billing/${bill.id}`} className="font-medium text-primary">{bill.invoice_no}</Link>)
+            </>
+          ) : null}
+          . To change it, edit or delete the bill.
+        </p>
+      )}
+
+      {profile.role === "owner" && !fromBill && (
         <>
           <h2 className="mb-2 text-lg font-medium text-foreground">Edit Stock-Out</h2>
           <EditStockOutForm

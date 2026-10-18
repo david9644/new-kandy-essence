@@ -118,3 +118,33 @@ export async function resetDeletePin(loginPin: string, newPin: string) {
   revalidatePath("/settings");
   return { ok: true };
 }
+
+// Business details printed in the bill header (owner only -- enforced by the
+// app_settings_update policy; we also confirm a row was actually updated).
+export async function updateBusinessDetails(input: {
+  name: string;
+  address: string;
+  phone1: string;
+  phone2: string;
+}) {
+  const owner = await getOwnerProfile();
+  if (!owner) return { error: "Only the owner can change the business details." };
+
+  const clean = (v: string) => v.trim() || null;
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("app_settings")
+    .update({
+      business_name: clean(input.name),
+      business_address: clean(input.address),
+      business_phone1: clean(input.phone1),
+      business_phone2: clean(input.phone2),
+    })
+    .eq("id", true)
+    .select("id");
+  if (error) return { error: error.message };
+  if (!data || data.length === 0) return { error: "Could not save the business details." };
+  revalidatePath("/settings");
+  revalidatePath("/billing");
+  return { ok: true };
+}

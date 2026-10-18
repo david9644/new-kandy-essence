@@ -22,6 +22,9 @@ export interface LedgerRow {
   credit: number;
   running_balance: number;
   notes?: string;
+  /** Set when the row was created by a bill: read-only here, edit the bill. */
+  invoice_id?: string | null;
+  invoice_no?: string | null;
 }
 
 export function CustomerLedgerTable({ rows, customerId }: { rows: LedgerRow[]; customerId: string }) {
@@ -52,12 +55,19 @@ export function CustomerLedgerTable({ rows, customerId }: { rows: LedgerRow[]; c
             {rows.map((row) => (
               <tr
                 key={row.entry_id}
-                onClick={() => setOpenId(row.entry_id)}
+                onClick={() =>
+                  row.invoice_id ? router.push(`/billing/${row.invoice_id}`) : setOpenId(row.entry_id)
+                }
                 className="cursor-pointer border-t border-border active:bg-background"
               >
                 <td className="px-4 py-3 text-foreground">{row.entry_date}</td>
                 <td className="px-4 py-3 text-foreground">
                   <span className="font-medium text-primary">{row.reference}</span>
+                  {row.invoice_id && (
+                    <span className="block text-xs font-normal text-muted print:hidden">
+                      From bill {row.invoice_no} &middot; open the bill to change it
+                    </span>
+                  )}
                 </td>
                 <td className="px-4 py-3 text-right tabular-nums text-foreground">
                   {row.debit ? formatCurrency(row.debit) : "-"}

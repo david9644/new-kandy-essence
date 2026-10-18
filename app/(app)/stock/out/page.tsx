@@ -17,6 +17,7 @@ export default async function StockOutPage() {
     supabase
       .from("stock_out")
       .select("id, quantity, unit_name, date, items(name)")
+      .is("invoice_id", null)
       .order("date", { ascending: false })
       .order("created_at", { ascending: false })
       .limit(20),

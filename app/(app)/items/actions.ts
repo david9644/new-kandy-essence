@@ -14,6 +14,8 @@ export interface ItemInput {
   base_unit: string;
   reorder_level: number;
   batch_tracked: boolean;
+  /** Optional default selling price per base unit, used to pre-fill bills. */
+  sale_price?: number | null;
   units: UnitInput[];
 }
 
@@ -21,6 +23,9 @@ function validate(input: ItemInput): string | null {
   if (!input.name.trim()) return "Name is required.";
   if (!input.base_unit.trim()) return "Base unit is required.";
   if (input.reorder_level < 0) return "Reorder level cannot be negative.";
+  if (input.sale_price != null && !(input.sale_price >= 0)) {
+    return "Selling price cannot be negative.";
+  }
   for (const u of input.units) {
     if (!u.unit_name.trim()) return "Every secondary unit needs a name.";
     if (u.unit_name.trim().toLowerCase() === input.base_unit.trim().toLowerCase()) {
@@ -48,6 +53,7 @@ export async function createItem(input: ItemInput) {
       base_unit: input.base_unit.trim(),
       reorder_level: input.reorder_level,
       batch_tracked: input.batch_tracked,
+      sale_price: input.sale_price ?? null,
     })
     .select("id, code")
     .single();
@@ -85,6 +91,7 @@ export async function updateItem(itemId: string, input: ItemInput) {
       base_unit: input.base_unit.trim(),
       reorder_level: input.reorder_level,
       batch_tracked: input.batch_tracked,
+      sale_price: input.sale_price ?? null,
     })
     .eq("id", itemId);
 

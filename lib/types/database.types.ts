@@ -16,14 +16,26 @@ export type Database = {
     Tables: {
       app_settings: {
         Row: {
+          business_address: string | null
+          business_name: string | null
+          business_phone1: string | null
+          business_phone2: string | null
           daily_cheque_limit: number
           id: boolean
         }
         Insert: {
+          business_address?: string | null
+          business_name?: string | null
+          business_phone1?: string | null
+          business_phone2?: string | null
           daily_cheque_limit?: number
           id?: boolean
         }
         Update: {
+          business_address?: string | null
+          business_name?: string | null
+          business_phone1?: string | null
+          business_phone2?: string | null
           daily_cheque_limit?: number
           id?: boolean
         }
@@ -140,6 +152,7 @@ export type Database = {
           customer_id: string
           date: string
           id: string
+          invoice_id: string | null
           notes: string | null
         }
         Insert: {
@@ -149,6 +162,7 @@ export type Database = {
           customer_id: string
           date?: string
           id?: string
+          invoice_id?: string | null
           notes?: string | null
         }
         Update: {
@@ -158,6 +172,7 @@ export type Database = {
           customer_id?: string
           date?: string
           id?: string
+          invoice_id?: string | null
           notes?: string | null
         }
         Relationships: [
@@ -211,6 +226,7 @@ export type Database = {
           customer_id: string
           date: string
           id: string
+          invoice_id: string | null
           notes: string | null
         }
         Insert: {
@@ -220,6 +236,7 @@ export type Database = {
           customer_id: string
           date?: string
           id?: string
+          invoice_id?: string | null
           notes?: string | null
         }
         Update: {
@@ -229,6 +246,7 @@ export type Database = {
           customer_id?: string
           date?: string
           id?: string
+          invoice_id?: string | null
           notes?: string | null
         }
         Relationships: [
@@ -299,6 +317,94 @@ export type Database = {
           },
         ]
       }
+      invoice_items: {
+        Row: {
+          base_quantity: number
+          conversion_factor: number
+          created_at: string
+          id: string
+          invoice_id: string
+          item_id: string
+          line_discount: number
+          line_no: number
+          line_total: number
+          quantity: number
+          stock_out_id: string | null
+          unit_name: string
+          unit_price: number
+        }
+        Insert: never
+        Update: never
+        Relationships: [
+          {
+            foreignKeyName: "invoice_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_items_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoice_payments: {
+        Row: {
+          amount: number
+          cheque_bank: string | null
+          cheque_date: string | null
+          cheque_number: string | null
+          created_at: string
+          id: string
+          invoice_id: string
+          method: string
+          reference: string | null
+        }
+        Insert: never
+        Update: never
+        Relationships: [
+          {
+            foreignKeyName: "invoice_payments_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoices: {
+        Row: {
+          bill_discount: number
+          cancelled_at: string | null
+          cancelled_by: string | null
+          client_key: string | null
+          created_at: string
+          created_by: string | null
+          credit_amount: number
+          customer_code: string | null
+          customer_id: string | null
+          customer_name: string | null
+          date: string
+          edit_count: number
+          edited_at: string | null
+          edited_by: string | null
+          id: string
+          invoice_no: string
+          line_discount_total: number
+          notes: string | null
+          paid_amount: number
+          status: string
+          subtotal: number
+          total: number
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
       item_units: {
         Row: {
           conversion_factor_to_base: number
@@ -339,6 +445,7 @@ export type Database = {
           created_by: string | null
           id: string
           last_purchase_cost: number | null
+          sale_price: number | null
           name: string
           reorder_level: number
           updated_at: string
@@ -354,6 +461,7 @@ export type Database = {
           created_by?: string | null
           id?: string
           last_purchase_cost?: number | null
+          sale_price?: number | null
           name: string
           reorder_level?: number
           updated_at?: string
@@ -369,6 +477,7 @@ export type Database = {
           created_by?: string | null
           id?: string
           last_purchase_cost?: number | null
+          sale_price?: number | null
           name?: string
           reorder_level?: number
           updated_at?: string
@@ -838,6 +947,7 @@ export type Database = {
           created_by: string | null
           date: string
           id: string
+          invoice_id: string | null
           item_id: string
           quantity: number
           unit_name: string
@@ -849,6 +959,7 @@ export type Database = {
           created_by?: string | null
           date?: string
           id?: string
+          invoice_id?: string | null
           item_id: string
           quantity: number
           unit_name: string
@@ -860,6 +971,7 @@ export type Database = {
           created_by?: string | null
           date?: string
           id?: string
+          invoice_id?: string | null
           item_id?: string
           quantity?: number
           unit_name?: string
@@ -1141,6 +1253,51 @@ export type Database = {
       }
     }
     Functions: {
+      cancel_invoice: {
+        Args: { p_delete_pin: string; p_invoice_id: string }
+        Returns: Json
+      }
+      create_invoice: {
+        Args: {
+          p_bill_discount: number
+          p_client_key?: string | null
+          p_confirm_shortage?: boolean
+          p_customer_id: string | null
+          p_date: string
+          p_expected_total: number
+          p_lines: Json
+          p_notes: string | null
+          p_payments: Json
+        }
+        Returns: Json
+      }
+      get_item_last_sale_price: {
+        Args: { p_item_id: string; p_unit_name: string }
+        Returns: number
+      }
+      quick_add_customer: {
+        Args: { p_contact?: string | null; p_name: string }
+        Returns: Json
+      }
+      search_customers_basic: {
+        Args: { p_query?: string }
+        Returns: { code: string; id: string; name: string }[]
+      }
+      update_invoice: {
+        Args: {
+          p_bill_discount: number
+          p_confirm_shortage?: boolean
+          p_customer_id: string | null
+          p_date: string
+          p_delete_pin: string
+          p_expected_total: number
+          p_invoice_id: string
+          p_lines: Json
+          p_notes: string | null
+          p_payments: Json
+        }
+        Returns: Json
+      }
       admin_reset_delete_pin: {
         Args: { p_new_pin: string; p_owner_id: string }
         Returns: undefined
@@ -1287,6 +1444,8 @@ export type Database = {
           entry_date: string
           entry_id: string
           entry_type: string
+          invoice_id: string
+          invoice_no: string
           reference: string
           running_balance: number
         }[]
@@ -1374,10 +1533,6 @@ export type Database = {
       set_delete_pin: {
         Args: { p_current_pin?: string; p_new_pin: string }
         Returns: Json
-      }
-      stock_out_apply_fefo: {
-        Args: { p_base_qty: number; p_item_id: string; p_stock_out_id: string }
-        Returns: undefined
       }
       update_cheque_status: {
         Args: {

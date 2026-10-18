@@ -61,6 +61,7 @@ export default async function ItemDetailPage({
             base_unit: item.base_unit,
             reorder_level: item.reorder_level,
             batch_tracked: item.batch_tracked,
+            sale_price: item.sale_price,
             units: (units ?? []).map((u) => ({
               unit_name: u.unit_name,
               conversion_factor_to_base: u.conversion_factor_to_base,
@@ -75,6 +76,10 @@ export default async function ItemDetailPage({
           <dd className="text-foreground">{item.base_unit}</dd>
           <dt className="text-muted">Reorder level</dt>
           <dd className="text-foreground">{item.reorder_level}</dd>
+          <dt className="text-muted">Selling price</dt>
+          <dd className="text-foreground">
+            {item.sale_price != null ? `${formatCurrency(item.sale_price)} per ${item.base_unit}` : "-"}
+          </dd>
           <dt className="text-muted">Batch tracked</dt>
           <dd className="text-foreground">{item.batch_tracked ? "Yes" : "No"}</dd>
           {(units ?? []).map((u) => (

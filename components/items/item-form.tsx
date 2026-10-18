@@ -21,6 +21,7 @@ interface ItemFormProps {
     base_unit: string;
     reorder_level: number;
     batch_tracked: boolean;
+    sale_price?: number | null;
     units: UnitInput[];
   };
   onSubmit: (input: ItemInput) => Promise<{ error?: string; ok?: boolean; id?: string }>;
@@ -94,6 +95,9 @@ export function ItemForm({ categories, initial, onSubmit, submitLabel }: ItemFor
   const [baseUnit, setBaseUnit] = useState(initial?.base_unit ?? "");
   const [reorderLevel, setReorderLevel] = useState(String(initial?.reorder_level ?? 0));
   const [batchTracked, setBatchTracked] = useState(initial?.batch_tracked ?? true);
+  const [salePrice, setSalePrice] = useState(
+    initial?.sale_price != null ? String(initial.sale_price) : ""
+  );
   const [units, setUnits] = useState<UnitInput[]>(initial?.units ?? []);
   const [stockQuantity, setStockQuantity] = useState("");
   const [stockCostPrice, setStockCostPrice] = useState("");
@@ -121,6 +125,7 @@ export function ItemForm({ categories, initial, onSubmit, submitLabel }: ItemFor
     setBaseUnit("");
     setReorderLevel("0");
     setBatchTracked(true);
+    setSalePrice("");
     setUnits([]);
     setStockQuantity("");
     setStockCostPrice("");
@@ -144,6 +149,7 @@ export function ItemForm({ categories, initial, onSubmit, submitLabel }: ItemFor
         base_unit: baseUnit,
         reorder_level: Number(reorderLevel) || 0,
         batch_tracked: batchTracked,
+        sale_price: salePrice.trim() === "" ? null : Number(salePrice),
         units,
       });
 
@@ -256,6 +262,21 @@ export function ItemForm({ categories, initial, onSubmit, submitLabel }: ItemFor
             className="w-full rounded-lg border border-border bg-surface px-4 py-3 text-base text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
         </div>
+      </div>
+
+      <div>
+        <label className="mb-1.5 block text-sm font-medium text-foreground">
+          Selling Price per {baseUnit || "base unit"} (optional)
+        </label>
+        <KeyboardNumberInput
+          value={salePrice}
+          onChange={setSalePrice}
+          className="w-full rounded-lg border border-border bg-surface px-4 py-3 text-right text-base tabular-nums text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+        />
+        <p className="mt-1 text-xs text-muted">
+          Pre-fills the unit price on a bill (multiplied by the unit&rsquo;s size). Leave empty
+          if the price changes every time.
+        </p>
       </div>
 
       <label className="flex min-h-[44px] items-center gap-3 text-sm font-medium text-foreground">
