@@ -34,6 +34,9 @@ export interface BillInput {
    * lines and rejects the bill if this does not match to the cent. */
   expected_total: number;
   confirm_shortage: boolean;
+  /** Cash the customer handed over (optional). Must cover the cash payment;
+   * the change is worked out from it when printing. */
+  cash_received: number | null;
 }
 
 export interface StockShortage {
@@ -77,6 +80,7 @@ function rpcArgs(input: BillInput) {
     p_payments: input.payments as unknown as Json,
     p_expected_total: input.expected_total,
     p_confirm_shortage: input.confirm_shortage,
+    p_cash_received: input.cash_received,
   };
 }
 
@@ -167,4 +171,13 @@ export async function quickAddCustomer(name: string, contact: string) {
 
   revalidatePath("/customers");
   return { ok: true as const, customer };
+}
+
+// Called by the print view after the browser print dialog closes. Bumps the
+// bill's print counter (a later print is labelled COPY).
+export async function recordInvoicePrint(invoiceId: string): Promise<number | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("record_invoice_print", { p_invoice_id: invoiceId });
+  if (error) return null;
+  return (data as { print_count?: number } | null)?.print_count ?? null;
 }

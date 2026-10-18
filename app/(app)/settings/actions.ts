@@ -7,6 +7,7 @@ import { getCurrentProfile } from "@/lib/auth/session";
 import { isValidPinFormat, verifyPin } from "@/lib/auth/pin";
 import { clearAttempts, isThrottled, recordFailedAttempt } from "@/lib/auth/rate-limit";
 import { deleteFailure } from "@/lib/delete-pin";
+import { validatePrintSettings, type PrintSettings } from "@/lib/print/settings";
 
 export async function createBankAccount(name: string) {
   if (!name.trim()) return { error: "Account name is required." };
@@ -146,5 +147,35 @@ export async function updateBusinessDetails(input: {
   if (!data || data.length === 0) return { error: "Could not save the business details." };
   revalidatePath("/settings");
   revalidatePath("/billing");
+  return { ok: true };
+}
+
+// Printer grid for the bill printer (owner only; also re-validated here
+// because the browser form is not trusted -- the database has matching CHECKs).
+export async function updatePrintSettings(input: PrintSettings) {
+  const owner = await getOwnerProfile();
+  if (!owner) return { error: "Only the owner can change the printing settings." };
+  const problem = validatePrintSettings(input);
+  if (problem) return { error: problem };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("app_settings")
+    .update({
+      print_page_width_in: input.pageWidthIn,
+      print_page_height_in: input.pageHeightIn,
+      print_margin_top_in: input.marginTopIn,
+      print_margin_bottom_in: input.marginBottomIn,
+      print_margin_left_in: input.marginLeftIn,
+      print_margin_right_in: input.marginRightIn,
+      print_cpi: input.cpi,
+      print_lpi: input.lpi,
+      print_footer: input.footer.trim() || "Thank you. Come again.",
+    })
+    .eq("id", true)
+    .select("id");
+  if (error) return { error: error.message };
+  if (!data || data.length === 0) return { error: "Could not save the printing settings." };
+  revalidatePath("/settings");
   return { ok: true };
 }

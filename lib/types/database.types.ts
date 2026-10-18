@@ -22,6 +22,15 @@ export type Database = {
           business_phone2: string | null
           daily_cheque_limit: number
           id: boolean
+          print_cpi: number
+          print_footer: string
+          print_lpi: number
+          print_margin_bottom_in: number
+          print_margin_left_in: number
+          print_margin_right_in: number
+          print_margin_top_in: number
+          print_page_height_in: number
+          print_page_width_in: number
         }
         Insert: {
           business_address?: string | null
@@ -30,6 +39,15 @@ export type Database = {
           business_phone2?: string | null
           daily_cheque_limit?: number
           id?: boolean
+          print_cpi?: number
+          print_footer?: string
+          print_lpi?: number
+          print_margin_bottom_in?: number
+          print_margin_left_in?: number
+          print_margin_right_in?: number
+          print_margin_top_in?: number
+          print_page_height_in?: number
+          print_page_width_in?: number
         }
         Update: {
           business_address?: string | null
@@ -38,6 +56,15 @@ export type Database = {
           business_phone2?: string | null
           daily_cheque_limit?: number
           id?: boolean
+          print_cpi?: number
+          print_footer?: string
+          print_lpi?: number
+          print_margin_bottom_in?: number
+          print_margin_left_in?: number
+          print_margin_right_in?: number
+          print_margin_top_in?: number
+          print_page_height_in?: number
+          print_page_width_in?: number
         }
         Relationships: []
       }
@@ -381,22 +408,27 @@ export type Database = {
           bill_discount: number
           cancelled_at: string | null
           cancelled_by: string | null
+          cash_received: number | null
           client_key: string | null
           created_at: string
           created_by: string | null
+          created_by_name: string | null
           credit_amount: number
           customer_code: string | null
           customer_id: string | null
           customer_name: string | null
+          customer_phone: string | null
           date: string
           edit_count: number
           edited_at: string | null
           edited_by: string | null
+          first_printed_at: string | null
           id: string
           invoice_no: string
           line_discount_total: number
           notes: string | null
           paid_amount: number
+          print_count: number
           status: string
           subtotal: number
           total: number
@@ -1260,6 +1292,7 @@ export type Database = {
       create_invoice: {
         Args: {
           p_bill_discount: number
+          p_cash_received?: number | null
           p_client_key?: string | null
           p_confirm_shortage?: boolean
           p_customer_id: string | null
@@ -1275,6 +1308,10 @@ export type Database = {
         Args: { p_item_id: string; p_unit_name: string }
         Returns: number
       }
+      record_invoice_print: {
+        Args: { p_invoice_id: string }
+        Returns: Json
+      }
       quick_add_customer: {
         Args: { p_contact?: string | null; p_name: string }
         Returns: Json
@@ -1286,6 +1323,7 @@ export type Database = {
       update_invoice: {
         Args: {
           p_bill_discount: number
+          p_cash_received?: number | null
           p_confirm_shortage?: boolean
           p_customer_id: string | null
           p_date: string

@@ -19,7 +19,7 @@ export default async function EditBillPage({
       supabase
         .from("invoices")
         .select(
-          "id, invoice_no, date, customer_id, customer_name, customer_code, bill_discount, notes"
+          "id, invoice_no, date, customer_id, customer_name, customer_code, bill_discount, notes, cash_received"
         )
         .eq("id", invoiceId)
         .maybeSingle(),
@@ -67,6 +67,7 @@ export default async function EditBillPage({
         customer,
         billDiscount: invoice.bill_discount,
         notes: invoice.notes ?? "",
+        cashReceived: invoice.cash_received,
         lines: (lines ?? []).map((l) => ({
           itemId: l.item_id,
           unitName: l.unit_name,

@@ -4,6 +4,8 @@ import { AddNameForm } from "@/components/settings/add-name-form";
 import { DailyChequeLimitForm } from "@/components/settings/daily-cheque-limit-form";
 import { DeletePinForm } from "@/components/settings/delete-pin-form";
 import { BusinessDetailsForm } from "@/components/settings/business-details-form";
+import { PrintingSettingsForm } from "@/components/settings/printing-settings-form";
+import { loadPrintConfig } from "@/lib/print/load";
 import { ActiveToggleButton } from "@/components/items/active-toggle-button";
 import { createCategory } from "@/app/(app)/items/actions";
 import {
@@ -13,14 +15,20 @@ import {
   setDeletePin,
   resetDeletePin,
   updateBusinessDetails,
+  updatePrintSettings,
 } from "@/app/(app)/settings/actions";
 
 export default async function SettingsPage() {
   await requireOwner();
   const supabase = await createClient();
 
-  const [{ data: categories }, { data: bankAccounts }, { data: appSettings }, { data: hasPin }] =
-    await Promise.all([
+  const [
+    { data: categories },
+    { data: bankAccounts },
+    { data: appSettings },
+    { data: hasPin },
+    printConfig,
+  ] = await Promise.all([
       supabase.from("categories").select("id, name").order("name"),
       supabase.from("bank_accounts").select("id, name, active").order("name"),
       supabase
@@ -29,6 +37,7 @@ export default async function SettingsPage() {
         .eq("id", true)
         .maybeSingle(),
       supabase.rpc("has_delete_pin"),
+      loadPrintConfig(supabase),
     ]);
 
   return (
@@ -62,6 +71,16 @@ export default async function SettingsPage() {
           }}
           onSubmit={updateBusinessDetails}
         />
+      </section>
+
+      <section>
+        <h2 className="mb-3 text-lg font-medium text-foreground">Printing</h2>
+        <p className="mb-3 text-sm text-muted">
+          How a bill is laid out on the dot-matrix printer&rsquo;s tractor paper. The numbers are
+          only a starting point &mdash; use the test prints to see what the printer really does and
+          adjust.
+        </p>
+        <PrintingSettingsForm initial={printConfig.settings} onSubmit={updatePrintSettings} />
       </section>
 
       <section>

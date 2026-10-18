@@ -50,6 +50,8 @@ export interface InitialBill {
   customer: CustomerOption | null;
   billDiscount: number;
   notes: string;
+  /** Cash the customer handed over, when it was recorded. */
+  cashReceived: number | null;
   lines: {
     itemId: string;
     unitName: string;

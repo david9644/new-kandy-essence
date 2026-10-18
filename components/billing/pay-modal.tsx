@@ -82,7 +82,9 @@ export function PayModal({
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-foreground">Cash received</label>
+          <label className="mb-1 block text-sm font-medium text-foreground">
+            Cash received <span className="font-normal text-muted">(type what the customer hands over)</span>
+          </label>
           <KeyboardNumberInput
             value={pay.touched ? pay.cash : String(fromCents(summary.cashTenderedC))}
             onChange={(v) => patch({ cash: v })}

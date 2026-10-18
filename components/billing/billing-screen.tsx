@@ -52,6 +52,7 @@ function initialPay(initial?: InitialBill): PayState {
       });
     }
   }
+  if (initial.cashReceived !== null && cash > 0) cash = initial.cashReceived;
   return {
     touched: true,
     cash: cash ? String(cash) : "",
@@ -213,6 +214,7 @@ export function BillingScreen({
   const [saving, setSaving] = useState(false);
   const [pinOpen, setPinOpen] = useState(false);
   const confirmRef = useRef(false);
+  const printAfterRef = useRef(false);
   const clientKey = useRef(uuid());
   const leaveOk = useRef(false);
 
@@ -410,12 +412,22 @@ export function BillingScreen({
       payments: buildPayments(summary, pay),
       expected_total: fromCents(calc.totalC),
       confirm_shortage: confirmShortage,
+      cash_received: cashReceivedToStore(),
     };
+  }
+
+  // Only worth storing when the customer handed over more than the cash
+  // payment (there is change to show), or when an edited bill already had it.
+  // An untouched default ("paid in full, in cash") says nothing about change.
+  function cashReceivedToStore(): number | null {
+    if (!pay.touched || summary.cashAppliedC <= 0) return null;
+    if (summary.cashTenderedC > summary.cashAppliedC) return fromCents(summary.cashTenderedC);
+    return initial?.cashReceived != null ? fromCents(summary.cashTenderedC) : null;
   }
 
   function finish(invoiceId: string) {
     leaveOk.current = true;
-    router.push(`/billing/${invoiceId}`);
+    router.push(printAfterRef.current ? `/billing/${invoiceId}/print?auto=1` : `/billing/${invoiceId}`);
   }
 
   async function doCreate(confirmShortage: boolean) {
@@ -437,8 +449,9 @@ export function BillingScreen({
     else void doCreate(confirmShortage);
   }
 
-  function onSave() {
+  function onSave(thenPrint = false) {
     if (problems.length > 0 || saving) return;
+    printAfterRef.current = thenPrint;
     if (calc.short.length > 0) {
       setShortages(calc.short);
       return;
@@ -492,11 +505,19 @@ export function BillingScreen({
             </button>
             <button
               type="button"
-              onClick={onSave}
+              onClick={() => onSave(false)}
+              disabled={problems.length > 0 || saving}
+              className="flex h-14 items-center rounded-xl border border-primary px-5 text-base font-semibold text-primary disabled:opacity-40"
+            >
+              {saving ? "Saving..." : mode === "edit" ? "Save Changes" : "Save Bill"}
+            </button>
+            <button
+              type="button"
+              onClick={() => onSave(true)}
               disabled={problems.length > 0 || saving}
               className="flex h-14 items-center rounded-xl bg-primary px-6 text-lg font-semibold text-primary-foreground disabled:opacity-40"
             >
-              {saving ? "Saving..." : mode === "edit" ? "Save Changes" : "Save Bill"}
+              Save &amp; Print
             </button>
           </div>
         </div>

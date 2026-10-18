@@ -83,14 +83,12 @@ export default async function InvoiceDetailPage({
           >
             New Bill
           </Link>
-          <button
-            type="button"
-            disabled
-            title="Printing comes in the next step"
-            className="flex h-11 items-center rounded-lg border border-border px-4 text-sm font-medium text-muted opacity-60"
+          <Link
+            href={`/billing/${invoice.id}/print`}
+            className="flex h-11 items-center rounded-lg border border-primary px-4 text-sm font-medium text-primary active:bg-background"
           >
             Print
-          </button>
+          </Link>
           {isOwner && (
             <>
               <Link
