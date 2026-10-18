@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { NavLink } from "@/components/shared/nav-link";
 import { usePathname } from "next/navigation";
 
 export type NavAccent = "purchases" | "stock" | "cheques";
@@ -46,7 +46,7 @@ export function PrimaryNav({ items }: { items: PrimaryNavItem[] }) {
           ? (item.accent ? ACCENT_CLASSES[item.accent] : "border-primary text-primary")
           : "border-border bg-background text-foreground";
         return (
-          <Link
+          <NavLink
             key={item.href}
             href={item.href}
             className={`flex min-h-[44px] items-center rounded-lg border px-4 text-sm font-medium active:bg-border ${accentClasses} ${
@@ -54,7 +54,7 @@ export function PrimaryNav({ items }: { items: PrimaryNavItem[] }) {
             }`}
           >
             {item.label}
-          </Link>
+          </NavLink>
         );
       })}
     </>

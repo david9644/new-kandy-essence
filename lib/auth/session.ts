@@ -1,10 +1,16 @@
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/types/database.types";
 
 export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 
-export async function getCurrentProfile(): Promise<Profile | null> {
+// Wrapped in React's per-request cache: the layout and the page both ask for
+// the signed-in profile while rendering ONE request, and now share a single
+// getUser() + get_own_profile() instead of each doing their own. The cache
+// lives only for that request (never across requests or users), so every
+// request still verifies the session with Supabase Auth.
+export const getCurrentProfile = cache(async (): Promise<Profile | null> => {
   const supabase = await createClient();
 
   // getUser() and get_own_profile() run concurrently: the profile lookup
@@ -26,7 +32,7 @@ export async function getCurrentProfile(): Promise<Profile | null> {
   if (!user || !profile || profile.id !== user.id) return null;
 
   return profile;
-}
+});
 
 export async function requireProfile(): Promise<Profile> {
   const profile = await getCurrentProfile();
