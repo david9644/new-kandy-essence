@@ -410,6 +410,7 @@ export type Database = {
           cancelled_by: string | null
           cash_received: number | null
           client_key: string | null
+          last_edit_key: string | null
           created_at: string
           created_by: string | null
           created_by_name: string | null
@@ -1328,12 +1329,17 @@ export type Database = {
           p_customer_id: string | null
           p_date: string
           p_delete_pin: string
+          p_edit_key?: string | null
           p_expected_total: number
           p_invoice_id: string
           p_lines: Json
           p_notes: string | null
           p_payments: Json
         }
+        Returns: Json
+      }
+      get_billing_shelf: {
+        Args: never
         Returns: Json
       }
       admin_reset_delete_pin: {

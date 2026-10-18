@@ -1,21 +1,18 @@
 import { requireProfile } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
-import { BillingScreen } from "@/components/billing/billing-screen";
-import { loadBillCustomers, loadBillItems, todayIso } from "@/lib/billing-data";
+import { TillScreen } from "@/components/till/till-screen";
+import { loadBillCustomers, loadBillShelf, todayIso } from "@/lib/billing-data";
 
 export default async function NewBillPage() {
   const profile = await requireProfile();
   const supabase = await createClient();
 
-  const [items, customers] = await Promise.all([
-    loadBillItems(supabase),
-    loadBillCustomers(supabase),
-  ]);
+  const [shelf, customers] = await Promise.all([loadBillShelf(supabase), loadBillCustomers(supabase)]);
 
   return (
-    <BillingScreen
+    <TillScreen
       mode="create"
-      items={items}
+      initialShelf={shelf}
       customers={customers}
       isOwner={profile.role === "owner"}
       today={todayIso()}

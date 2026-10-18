@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/types/database.types";
-import type { BillItem, CustomerOption } from "@/components/billing/bill-types";
+import type { CustomerOption } from "@/components/billing/bill-types";
+import { normalizeShelf, type Shelf } from "@/lib/till/shelf";
 
 type Client = SupabaseClient<Database>;
 
@@ -8,34 +9,12 @@ export function todayIso(): string {
   return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Colombo" });
 }
 
-// Active items with their selling price, units and total on-hand stock, for
-// the billing screen's in-memory type-ahead. Only quantity is read from the
-// stock view (never its cost/value columns).
-export async function loadBillItems(supabase: Client): Promise<BillItem[]> {
-  const [{ data: items }, { data: stock }] = await Promise.all([
-    supabase
-      .from("items")
-      .select("id, code, name, base_unit, sale_price, item_units(unit_name, conversion_factor_to_base)")
-      .eq("active", true)
-      .order("name")
-      .range(0, 4999),
-    supabase.from("item_stock_summary").select("item_id, total_quantity").range(0, 4999),
-  ]);
-
-  const onHand = new Map<string, number>();
-  for (const row of stock ?? []) {
-    if (row.item_id) onHand.set(row.item_id, Number(row.total_quantity ?? 0));
-  }
-
-  return (items ?? []).map((i) => ({
-    id: i.id,
-    code: i.code,
-    name: i.name,
-    base_unit: i.base_unit,
-    sale_price: i.sale_price,
-    units: i.item_units,
-    on_hand: onHand.get(i.id) ?? 0,
-  }));
+// The till screen's shelf: one read of categories, items, unit prices and
+// stock (no cost data). Null if the read fails.
+export async function loadBillShelf(supabase: Client): Promise<Shelf | null> {
+  const { data, error } = await supabase.rpc("get_billing_shelf");
+  if (error || !data) return null;
+  return normalizeShelf(data);
 }
 
 // Customers come through the narrow id/code/name function so a Store Keeper

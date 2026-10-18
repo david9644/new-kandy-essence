@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { deleteFailure, type DeletePinCode } from "@/lib/delete-pin";
 import type { Json } from "@/lib/types/database.types";
+import { normalizeShelf, type Shelf } from "@/lib/till/shelf";
 
 export interface BillLineInput {
   item_id: string;
@@ -110,13 +111,15 @@ export async function createInvoice(input: BillInput, clientKey: string): Promis
 export async function updateInvoice(
   invoiceId: string,
   input: BillInput,
-  deletePin: string
+  deletePin: string,
+  editKey?: string
 ): Promise<SaveBillResult> {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("update_invoice", {
     ...rpcArgs(input),
     p_invoice_id: invoiceId,
     p_delete_pin: deletePin,
+    p_edit_key: editKey ?? null,
   });
   if (error) return { error: error.message };
 
@@ -129,6 +132,15 @@ export async function updateInvoice(
 
   revalidateBilling(invoiceId);
   return { ok: true, invoiceId, invoiceNo: result.invoice_no ?? "" };
+}
+
+// The whole shelf for the till screen in one read: categories, active items,
+// units with effective prices, stock on hand. No cost data (see 0029).
+export async function loadShelf(): Promise<Shelf | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("get_billing_shelf");
+  if (error || !data) return null;
+  return normalizeShelf(data);
 }
 
 // "Delete bill": soft delete, Owner + Delete PIN. Stock is restored and the
