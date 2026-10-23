@@ -2,8 +2,8 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { PrintFrame } from "@/components/print/print-frame";
-import { layoutInvoice, type PrintInvoice } from "@/lib/print/invoice-layout";
-import { deriveGrid, type PrintSettings } from "@/lib/print/settings";
+import { layoutBill, type PrintInvoice } from "@/lib/print/invoice-layout";
+import type { PrintSettings } from "@/lib/print/settings";
 import { recordInvoicePrint } from "@/app/(app)/billing/actions";
 
 // The bill as it will come out of the printer. Label rule:
@@ -31,8 +31,8 @@ export function InvoicePrintView({
   const [recording, setRecording] = useState(false);
 
   const label = copyChecked ? "COPY" : editCount > 0 ? "REVISED" : null;
-  const pages = useMemo(
-    () => layoutInvoice({ ...invoice, label }, deriveGrid(settings)),
+  const layout = useMemo(
+    () => layoutBill({ ...invoice, label }, settings),
     [invoice, label, settings]
   );
 
@@ -50,9 +50,10 @@ export function InvoicePrintView({
 
   return (
     <PrintFrame
-      pages={pages}
+      pages={layout.pages}
+      pageHeightsIn={layout.pageHeightsIn}
       settings={settings}
-      title={`${invoice.invoiceNo} · ${pages.length} ${pages.length === 1 ? "page" : "pages"}`}
+      title={invoice.invoiceNo}
       backHref={`/billing/${invoiceId}`}
       backLabel="Back to bill"
       autoPrint={autoPrint}

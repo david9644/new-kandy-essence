@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { KeyboardNumberInput } from "@/components/keyboard/keyboard-number-input";
 import { KeyboardTextInput } from "@/components/keyboard/keyboard-text-input";
+import { layoutBill, sampleInvoice } from "@/lib/print/invoice-layout";
 import {
   DEFAULT_PRINT_SETTINGS,
   deriveGrid,
@@ -16,7 +17,8 @@ import {
 const NUM =
   "w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-right text-sm tabular-nums text-foreground focus:border-primary focus:outline-none";
 
-type Draft = Record<keyof Omit<PrintSettings, "footer">, string> & { footer: string };
+type NumKey = Exclude<keyof PrintSettings, "footer" | "continuous">;
+type Draft = Record<NumKey, string> & { footer: string; continuous: boolean };
 
 function toDraft(s: PrintSettings): Draft {
   return {
@@ -29,6 +31,8 @@ function toDraft(s: PrintSettings): Draft {
     cpi: String(s.cpi),
     lpi: String(s.lpi),
     footer: s.footer,
+    continuous: s.continuous,
+    maxSheets: String(s.maxSheets),
   };
 }
 
@@ -44,6 +48,8 @@ function fromDraft(d: Draft): PrintSettings {
     cpi: n(d.cpi),
     lpi: n(d.lpi),
     footer: d.footer,
+    continuous: d.continuous,
+    maxSheets: n(d.maxSheets),
   };
 }
 
@@ -65,12 +71,26 @@ export function PrintingSettingsForm({
   const grid = problem ? null : deriveGrid(settings);
   const query = settingsToQuery(settings);
 
-  function set<K extends keyof Draft>(key: K, value: string) {
+  // What a typical 20-line and 50-line bill comes out as with these values.
+  const typical = problem
+    ? null
+    : [20, 50].map((n) => {
+        const l = layoutBill(sampleInvoice(n), settings);
+        const total = l.pageHeightsIn.reduce((a, b) => a + b, 0);
+        return {
+          n,
+          pieces: l.pages.length,
+          heightIn: total,
+          sheets: Math.round((total / settings.pageHeightIn) * 100) / 100,
+        };
+      });
+
+  function set<K extends keyof Draft>(key: K, value: Draft[K]) {
     setDraft((d) => ({ ...d, [key]: value }));
     setSaved(false);
   }
 
-  function field(label: string, key: keyof Omit<Draft, "footer">, hint?: string) {
+  function field(label: string, key: NumKey, hint?: string) {
     return (
       <div>
         <label className="mb-1 block text-xs font-medium text-muted">{label}</label>
@@ -115,14 +135,43 @@ export function PrintingSettingsForm({
         {field("Lines per inch", "lpi", "Usually 6")}
       </div>
 
+      <div className="rounded-lg border border-border p-3">
+        <label className="flex min-h-[44px] items-center gap-3 text-sm font-medium text-foreground">
+          <input
+            type="checkbox"
+            checked={draft.continuous}
+            onChange={(e) => set("continuous", e.target.checked)}
+            className="h-5 w-5"
+          />
+          Continuous bill (one long piece instead of several sheets)
+        </label>
+        <div className="mt-2 max-w-[14rem]">
+          {field(
+            "Maximum bill length (sheets)",
+            "maxSheets",
+            `One sheet = the page height (${draft.pageHeightIn} in). Longer bills are split.`
+          )}
+        </div>
+      </div>
+
       <div className="rounded-lg bg-background px-3 py-2 text-sm">
-        {grid ? (
+        {grid && typical ? (
           <>
-            <span className="text-muted">Printable grid: </span>
-            <span className="font-semibold text-foreground">
-              {grid.cols} characters × {grid.rows} lines
-            </span>
-            <span className="text-muted"> per page (calculated)</span>
+            <p>
+              <span className="text-muted">Characters per line: </span>
+              <span className="font-semibold text-foreground">{grid.cols}</span>
+              <span className="text-muted"> &middot; lines per sheet: </span>
+              <span className="font-semibold text-foreground">{grid.rows}</span>
+            </p>
+            {typical.map((t) => (
+              <p key={t.n}>
+                <span className="text-muted">Typical {t.n}-line bill (sample items) prints </span>
+                <span className="font-semibold text-foreground">
+                  {t.heightIn} in ({t.sheets} sheets
+                  {t.pieces > 1 ? `, ${t.pieces} pieces` : ""})
+                </span>
+              </p>
+            ))}
           </>
         ) : (
           <span className="text-danger">{problem}</span>
@@ -167,7 +216,7 @@ export function PrintingSettingsForm({
           printer <strong>TH880GJMS</strong>, paper <strong>NKE55</strong>, margins{" "}
           <strong>None</strong>, scale <strong>100%</strong>, headers/footers off. Check the
           border, the ruler (column numbers) and the line numbers on the paper: anything cut off
-          means that margin is too small.
+          means that margin is too small. With Continuous bill on, the test bill comes out as one long piece: its length is rounded up to a whole number of sheets, so check that the paper feeds that full length and stops on a perforation.
         </p>
         <div className="flex flex-wrap gap-2">
           <Link

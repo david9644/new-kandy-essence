@@ -19,7 +19,7 @@ export async function loadPrintConfig(supabase: SupabaseClient<Database>): Promi
   const { data } = await supabase
     .from("app_settings")
     .select(
-      "business_name, business_address, business_phone1, business_phone2, print_page_width_in, print_page_height_in, print_margin_top_in, print_margin_bottom_in, print_margin_left_in, print_margin_right_in, print_cpi, print_lpi, print_footer"
+      "business_name, business_address, business_phone1, business_phone2, print_page_width_in, print_page_height_in, print_margin_top_in, print_margin_bottom_in, print_margin_left_in, print_margin_right_in, print_cpi, print_lpi, print_footer, print_continuous, print_max_sheets"
     )
     .eq("id", true)
     .maybeSingle();
@@ -35,6 +35,8 @@ export async function loadPrintConfig(supabase: SupabaseClient<Database>): Promi
         cpi: Number(data.print_cpi),
         lpi: Number(data.print_lpi),
         footer: data.print_footer,
+        continuous: data.print_continuous,
+        maxSheets: Number(data.print_max_sheets),
       }
     : DEFAULT_PRINT_SETTINGS;
 

@@ -66,8 +66,8 @@ for (const n of [1, 10, 20, 35, 50]) {
   });
 }
 
-test("default grid is 54 x 30 and the page count grows with the bill", () => {
-  assert.deepEqual(GRID, { cols: 54, rows: 30 });
+test("default grid is 49 x 30 (right margin +1 cm) and the page count grows with the bill", () => {
+  assert.deepEqual(GRID, { cols: 49, rows: 30 });
   const counts = [1, 10, 20, 35, 50].map((n) => layoutInvoice(invoiceWith(n), GRID).length);
   assert.equal(counts[0], 1);
   for (let i = 1; i < counts.length; i++) assert.ok(counts[i] >= counts[i - 1]);
@@ -262,13 +262,13 @@ test("calibration page: border on the exact first/last column and line, ruler, n
   // ones-digit ruler on line 3: column c shows c % 10
   for (let c = 2; c <= GRID.cols - 1; c++) assert.equal(page[2][c - 1], String(c % 10));
   assert.equal(page[1][9], "1", "tens ruler: column 10 -> 1");
-  assert.equal(page[1][49], "5", "tens ruler: column 50 -> 5");
+  assert.equal(page[1][39], "4", "tens ruler: column 40 -> 4");
   assert.match(page[10], /^\|11/, "line numbers inside the border");
   assert.ok(page.join("\n").includes("TL") && page.join("\n").includes("BR"));
 });
 
 test("settings: derived grid, font size and validation", () => {
-  assert.deepEqual(deriveGrid(DEFAULT_PRINT_SETTINGS), { cols: 54, rows: 30 });
+  assert.deepEqual(deriveGrid(DEFAULT_PRINT_SETTINGS), { cols: 49, rows: 30 });
   assert.equal(fontSizePt(12), 10, "12 cpi -> 10 pt Courier-like (advance = 1/12 in)");
   assert.equal(validatePrintSettings(DEFAULT_PRINT_SETTINGS), null);
   assert.match(validatePrintSettings({ ...DEFAULT_PRINT_SETTINGS, cpi: 100 })!, /Characters per inch/);
@@ -278,5 +278,5 @@ test("settings: derived grid, font size and validation", () => {
     /characters fit/
   );
   assert.match(validatePrintSettings({ ...DEFAULT_PRINT_SETTINGS, footer: "x".repeat(81) })!, /80/);
-  assert.deepEqual(deriveGrid({ ...DEFAULT_PRINT_SETTINGS, cpi: 10 }), { cols: 45, rows: 30 });
+  assert.deepEqual(deriveGrid({ ...DEFAULT_PRINT_SETTINGS, cpi: 10 }), { cols: 41, rows: 30 });
 });

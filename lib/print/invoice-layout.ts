@@ -11,7 +11,13 @@
 // grids); no page is ever empty.
 
 import { formatQuantity } from "../units";
-import type { PrintGrid } from "./settings";
+import {
+  deriveGrid,
+  printedHeight,
+  rowsForHeight,
+  type PrintGrid,
+  type PrintSettings,
+} from "./settings";
 
 export type PrintLabel = "COPY" | "REVISED" | null;
 
@@ -226,6 +232,8 @@ function businessLines(b: PrintBusiness, cols: number, full: boolean): string[] 
 }
 
 function pageText(page: number, count: number): string {
+  // count 0 = one continuous piece: no "Page x of y" at all
+  if (count <= 0) return "";
   // padded to the widest value so the header is the same height on every page
   return padL(`Page ${page} of ${count}`, `Page ${count} of ${count}`.length);
 }
@@ -387,6 +395,110 @@ export function layoutInvoiceDetailed(inv: PrintInvoice, grid: PrintGrid): Layou
 
 export function layoutInvoice(inv: PrintInvoice, grid: PrintGrid): string[][] {
   return layoutInvoiceDetailed(inv, grid).pages;
+}
+
+// ── the bill as printed: one continuous piece, long pieces or sheets ────
+
+export type BillMode = "continuous" | "pieces" | "sheets";
+
+export interface BillLayout {
+  /** Each piece is exactly `heights[i]`'s worth of lines, every line `cols` wide. */
+  pages: string[][];
+  /** Printed height of each piece, a whole number of sheets. */
+  pageHeightsIn: number[];
+  mode: BillMode;
+  cols: number;
+  clippedLines: number;
+  overflowLines: number;
+}
+
+function fitTo(lines: string[], cols: number, rows: number, counters: { clipped: number }): string[] {
+  const out = lines.slice(0, rows).map((l) => fitLine(l, cols, counters));
+  while (out.length < rows) out.push(" ".repeat(cols));
+  return out;
+}
+
+/** Lay a bill out the way it will be printed.
+ *
+ *  continuous ON (default): ONE piece holding the header, every item and the
+ *  totals; no "Page x of y". Its height is (lines / lpi + top + bottom margin)
+ *  rounded UP to a whole number of sheets (a sheet = the page height), so the
+ *  next bill starts on a perforation. If that is longer than `maxSheets`
+ *  sheets, the bill is cut into pieces of `maxSheets` sheets (header repeated,
+ *  "Page x of y", totals never split); only the last piece is shorter.
+ *
+ *  continuous OFF: the original behaviour, pages of one sheet each. */
+export function layoutBill(inv: PrintInvoice, settings: PrintSettings): BillLayout {
+  const grid = deriveGrid(settings);
+  const { cols } = grid;
+
+  if (!settings.continuous) {
+    const r = layoutInvoiceDetailed(inv, grid);
+    return {
+      pages: r.pages,
+      pageHeightsIn: r.pages.map(() => settings.pageHeightIn),
+      mode: "sheets",
+      cols,
+      clippedLines: r.clippedLines,
+      overflowLines: r.overflowLines,
+    };
+  }
+
+  const columns = columnsFor(inv, cols);
+  const lines: string[] = [...fullHeader(inv, columns, cols, 1, 0)];
+  for (const l of inv.lines) lines.push(...itemBlock(l, columns, cols));
+  lines.push(...totalsBlock(inv, cols));
+
+  let { sheets, heightIn } = printedHeight(settings, lines.length);
+  let rows = rowsForHeight(settings, heightIn);
+  while (rows < lines.length) {
+    sheets += 1;
+    heightIn = Math.round(sheets * settings.pageHeightIn * 1000) / 1000;
+    rows = rowsForHeight(settings, heightIn);
+  }
+
+  if (sheets <= settings.maxSheets) {
+    const counters = { clipped: 0 };
+    return {
+      pages: [fitTo(lines, cols, rows, counters)],
+      pageHeightsIn: [heightIn],
+      mode: "continuous",
+      cols,
+      clippedLines: counters.clipped,
+      overflowLines: 0,
+    };
+  }
+
+  // Longer than the maximum: pieces of maxSheets sheets each.
+  const maxHeight = Math.round(settings.maxSheets * settings.pageHeightIn * 1000) / 1000;
+  const maxRows = rowsForHeight(settings, maxHeight);
+  const r = layoutInvoiceDetailed(inv, { cols, rows: maxRows });
+  const counters = { clipped: r.clippedLines };
+  const heights: number[] = [];
+  const pages = r.pages.map((page, i) => {
+    if (i < r.pages.length - 1) {
+      heights.push(maxHeight);
+      return page;
+    }
+    let used = page.length;
+    while (used > 1 && page[used - 1].trim() === "") used--;
+    let last = printedHeight(settings, used);
+    let lastRows = rowsForHeight(settings, last.heightIn);
+    while (lastRows < used) {
+      last = { sheets: last.sheets + 1, heightIn: (last.sheets + 1) * settings.pageHeightIn };
+      lastRows = rowsForHeight(settings, last.heightIn);
+    }
+    heights.push(last.heightIn);
+    return fitTo(page.slice(0, used), cols, lastRows, counters);
+  });
+  return {
+    pages,
+    pageHeightsIn: heights,
+    mode: "pieces",
+    cols,
+    clippedLines: counters.clipped,
+    overflowLines: r.overflowLines,
+  };
 }
 
 // ── test data + calibration page (never touch the database) ─────────────

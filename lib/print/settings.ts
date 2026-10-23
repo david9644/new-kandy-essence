@@ -15,6 +15,11 @@ export interface PrintSettings {
   /** Lines per inch. */
   lpi: number;
   footer: string;
+  /** Print the whole bill as ONE long piece (see layoutBill). */
+  continuous: boolean;
+  /** Longest single piece, in sheets (one sheet = pageHeightIn). Longer bills
+   * are cut into pieces of this length, each with a header and "Page x of y". */
+  maxSheets: number;
 }
 
 export interface PrintGrid {
@@ -24,6 +29,10 @@ export interface PrintGrid {
   rows: number;
 }
 
+/** 1 cm in inches. The right margin was widened by this much (migration 0030):
+ * the printed text now ends 1 cm earlier on the right than before. */
+export const ONE_CM_IN = 0.3937;
+
 // 5.5 x 5.5 in tractor paper (hole strips included), 12 cpi / 6 lpi.
 export const DEFAULT_PRINT_SETTINGS: PrintSettings = {
   pageWidthIn: 5.5,
@@ -31,10 +40,12 @@ export const DEFAULT_PRINT_SETTINGS: PrintSettings = {
   marginTopIn: 0.25,
   marginBottomIn: 0.25,
   marginLeftIn: 0.5,
-  marginRightIn: 0.5,
+  marginRightIn: 0.8937, // 0.5 in + 1 cm
   cpi: 12,
   lpi: 6,
   footer: "Thank you. Come again.",
+  continuous: true,
+  maxSheets: 6,
 };
 
 export const MIN_COLS = 30;
@@ -49,6 +60,23 @@ export function deriveGrid(s: PrintSettings): PrintGrid {
     cols: Math.max(0, Math.floor(usableW * s.cpi + EPS)),
     rows: Math.max(0, Math.floor(usableH * s.lpi + EPS)),
   };
+}
+
+/** Whole lines that fit in a page of the given height (top/bottom margins taken off). */
+export function rowsForHeight(s: PrintSettings, heightIn: number): number {
+  return Math.max(0, Math.floor((heightIn - s.marginTopIn - s.marginBottomIn) * s.lpi + EPS));
+}
+
+/** Printed length of a piece with `lineCount` lines: lines x line height plus
+ * the top and bottom margins, ROUNDED UP to a whole number of sheets, so the
+ * next bill starts on a perforation of the tractor paper. */
+export function printedHeight(
+  s: PrintSettings,
+  lineCount: number
+): { sheets: number; heightIn: number } {
+  const needIn = Math.max(1, lineCount) / s.lpi + s.marginTopIn + s.marginBottomIn;
+  const sheets = Math.max(1, Math.ceil(needIn / s.pageHeightIn - 1e-6));
+  return { sheets, heightIn: Math.round(sheets * s.pageHeightIn * 1000) / 1000 };
 }
 
 /** Font size (pt) whose monospace advance width is exactly 1/cpi inch.
@@ -75,6 +103,9 @@ export function validatePrintSettings(s: PrintSettings): string | null {
   }
   if (!inRange(s.cpi, 5, 30)) return "Characters per inch must be between 5 and 30.";
   if (!inRange(s.lpi, 3, 16)) return "Lines per inch must be between 3 and 16.";
+  if (!Number.isInteger(s.maxSheets) || s.maxSheets < 1 || s.maxSheets > 20) {
+    return "Maximum bill length must be a whole number of sheets between 1 and 20.";
+  }
   if (s.footer.length > 80) return "The footer line can be at most 80 characters.";
   if (/[\r\n]/.test(s.footer)) return "The footer must be a single line.";
 
@@ -101,6 +132,12 @@ export function applyOverrides(
     const n = Number(v);
     return Number.isFinite(n) ? n : fallback;
   };
+  const flag = (key: string, fallback: boolean): boolean => {
+    const raw = params[key];
+    const v = Array.isArray(raw) ? raw[0] : raw;
+    if (v === undefined || v === "") return fallback;
+    return v === "1" || v === "true";
+  };
   const footerRaw = params.footer;
   const footer = Array.isArray(footerRaw) ? footerRaw[0] : footerRaw;
   return {
@@ -113,6 +150,8 @@ export function applyOverrides(
     cpi: num("cpi", base.cpi),
     lpi: num("lpi", base.lpi),
     footer: footer !== undefined ? footer : base.footer,
+    continuous: flag("cont", base.continuous),
+    maxSheets: num("maxs", base.maxSheets),
   };
 }
 
@@ -127,6 +166,8 @@ export function settingsToQuery(s: PrintSettings): string {
     cpi: String(s.cpi),
     lpi: String(s.lpi),
     footer: s.footer,
+    cont: s.continuous ? "1" : "0",
+    maxs: String(s.maxSheets),
   });
   return p.toString();
 }

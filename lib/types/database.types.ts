@@ -22,9 +22,11 @@ export type Database = {
           business_phone2: string | null
           daily_cheque_limit: number
           id: boolean
+          print_continuous: boolean
           print_cpi: number
           print_footer: string
           print_lpi: number
+          print_max_sheets: number
           print_margin_bottom_in: number
           print_margin_left_in: number
           print_margin_right_in: number
@@ -39,9 +41,11 @@ export type Database = {
           business_phone2?: string | null
           daily_cheque_limit?: number
           id?: boolean
+          print_continuous?: boolean
           print_cpi?: number
           print_footer?: string
           print_lpi?: number
+          print_max_sheets?: number
           print_margin_bottom_in?: number
           print_margin_left_in?: number
           print_margin_right_in?: number
@@ -56,9 +60,11 @@ export type Database = {
           business_phone2?: string | null
           daily_cheque_limit?: number
           id?: boolean
+          print_continuous?: boolean
           print_cpi?: number
           print_footer?: string
           print_lpi?: number
+          print_max_sheets?: number
           print_margin_bottom_in?: number
           print_margin_left_in?: number
           print_margin_right_in?: number

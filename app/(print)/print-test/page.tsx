@@ -2,12 +2,8 @@ import { requireOwner } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { PrintFrame } from "@/components/print/print-frame";
 import { loadPrintConfig } from "@/lib/print/load";
-import { layoutCalibration, layoutInvoice, sampleInvoice } from "@/lib/print/invoice-layout";
-import {
-  applyOverrides,
-  deriveGrid,
-  validatePrintSettings,
-} from "@/lib/print/settings";
+import { layoutBill, layoutCalibration, sampleInvoice } from "@/lib/print/invoice-layout";
+import { applyOverrides, deriveGrid, validatePrintSettings } from "@/lib/print/settings";
 
 // Test prints for tuning the grid at Station 1. Owner only. Writes nothing to
 // the database: the page and the sample bill are generated on the fly.
@@ -26,6 +22,8 @@ export default async function PrintTestPage({
   const settings = applyOverrides(config.settings, params);
   const error = validatePrintSettings(settings);
   const kind = params.kind === "bill" ? "bill" : "calibration";
+  const nRaw = Number(Array.isArray(params.n) ? params.n[0] : params.n);
+  const lineCount = Number.isFinite(nRaw) ? Math.min(300, Math.max(1, Math.round(nRaw))) : 50;
 
   if (error) {
     return (
@@ -39,21 +37,25 @@ export default async function PrintTestPage({
   }
 
   const grid = deriveGrid(settings);
-  const pages =
+  const bill =
     kind === "bill"
-      ? layoutInvoice(
-          { ...sampleInvoice(50), business: config.business, footer: settings.footer },
-          grid
+      ? layoutBill(
+          { ...sampleInvoice(lineCount), business: config.business, footer: settings.footer },
+          settings
         )
-      : layoutCalibration(grid);
+      : null;
+  const pages = bill ? bill.pages : layoutCalibration(grid);
+  // The calibration page is one ordinary sheet (the page height itself).
+  const pageHeightsIn = bill ? bill.pageHeightsIn : pages.map(() => settings.pageHeightIn);
 
   return (
     <PrintFrame
       pages={pages}
+      pageHeightsIn={pageHeightsIn}
       settings={settings}
       title={
         kind === "bill"
-          ? `Test bill (50 lines) · ${grid.cols}×${grid.rows}`
+          ? `Test bill (${lineCount} lines) · ${grid.cols} chars wide`
           : `Calibration page · ${grid.cols}×${grid.rows}`
       }
       backHref="/settings"

@@ -171,6 +171,8 @@ export async function updatePrintSettings(input: PrintSettings) {
       print_cpi: input.cpi,
       print_lpi: input.lpi,
       print_footer: input.footer.trim() || "Thank you. Come again.",
+      print_continuous: input.continuous,
+      print_max_sheets: input.maxSheets,
     })
     .eq("id", true)
     .select("id");
