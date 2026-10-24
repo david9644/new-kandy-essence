@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { formatCurrency, formatQuantity } from "@/lib/units";
 import { KeyboardTextInput } from "@/components/keyboard/keyboard-text-input";
 
@@ -16,25 +17,62 @@ export interface ItemRow {
   active: boolean;
 }
 
-export function ItemsTable({ items }: { items: ItemRow[] }) {
-  const [query, setQuery] = useState("");
+// One page of items (the server pages and searches, so 3,000 items cost no
+// more than 50). The search box submits to the server; Prev / Next are links.
+export function ItemsTable({
+  items,
+  total,
+  page,
+  pageSize,
+  query,
+}: {
+  items: ItemRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+  query: string;
+}) {
+  const router = useRouter();
+  const [text, setText] = useState(query);
+  const pages = Math.max(1, Math.ceil(total / pageSize));
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return items;
-    return items.filter(
-      (i) => i.name.toLowerCase().includes(q) || i.code.toLowerCase().includes(q)
-    );
-  }, [items, query]);
+  function href(p: number, q: string): string {
+    const params = new URLSearchParams();
+    if (q) params.set("q", q);
+    if (p > 1) params.set("page", String(p));
+    const s = params.toString();
+    return s ? `/items?${s}` : "/items";
+  }
+
+  function submit(e: React.FormEvent) {
+    e.preventDefault();
+    router.push(href(1, text.trim()));
+  }
 
   return (
     <div>
-      <KeyboardTextInput
-        value={query}
-        onChange={setQuery}
-        placeholder="Search by name or code..."
-        className="mb-4 w-full rounded-lg border border-border bg-surface px-4 py-3 text-base text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-      />
+      <form onSubmit={submit} className="mb-4 flex gap-2">
+        <KeyboardTextInput
+          value={text}
+          onChange={setText}
+          placeholder="Search by name or code..."
+          className="w-full rounded-lg border border-border bg-surface px-4 py-3 text-base text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+        />
+        <button
+          type="submit"
+          className="h-12 shrink-0 rounded-lg bg-primary px-5 text-sm font-medium text-primary-foreground"
+        >
+          Search
+        </button>
+        {query && (
+          <Link
+            href="/items"
+            className="flex h-12 shrink-0 items-center rounded-lg border border-border px-4 text-sm font-medium text-foreground"
+          >
+            Clear
+          </Link>
+        )}
+      </form>
       <div className="overflow-x-auto rounded-xl border border-border">
         <table className="w-full min-w-[640px] text-left text-sm">
           <thead className="bg-background text-xs uppercase text-muted">
@@ -49,7 +87,7 @@ export function ItemsTable({ items }: { items: ItemRow[] }) {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((item) => (
+            {items.map((item) => (
               <tr key={item.id} className="border-t border-border">
                 <td className="px-4 py-3">
                   <Link href={`/items/${item.id}`} className="font-medium text-primary">
@@ -78,7 +116,7 @@ export function ItemsTable({ items }: { items: ItemRow[] }) {
                 </td>
               </tr>
             ))}
-            {filtered.length === 0 && (
+            {items.length === 0 && (
               <tr>
                 <td colSpan={7} className="px-4 py-8 text-center text-muted">
                   No items found.
@@ -87,6 +125,29 @@ export function ItemsTable({ items }: { items: ItemRow[] }) {
             )}
           </tbody>
         </table>
+      </div>
+      <div className="mt-3 flex items-center justify-between text-sm text-muted">
+        <span>
+          {total} {total === 1 ? "item" : "items"} &middot; page {Math.min(page, pages)} of {pages}
+        </span>
+        <div className="flex gap-2">
+          {page > 1 && (
+            <Link
+              href={href(page - 1, query)}
+              className="flex h-11 items-center rounded-lg border border-border px-4 font-medium text-foreground"
+            >
+              &larr; Previous
+            </Link>
+          )}
+          {page < pages && (
+            <Link
+              href={href(page + 1, query)}
+              className="flex h-11 items-center rounded-lg border border-border px-4 font-medium text-foreground"
+            >
+              Next &rarr;
+            </Link>
+          )}
+        </div>
       </div>
     </div>
   );

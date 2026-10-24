@@ -1,30 +1,38 @@
 import { requireProfile } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
+import { fetchAll } from "@/lib/supabase/fetch-all";
 import { PurchaseForm } from "@/components/purchases/purchase-form";
 import { BackButton } from "@/components/shared/back-button";
 
 export default async function NewPurchasePage() {
-  await requireProfile();
+  const profile = await requireProfile();
   const supabase = await createClient();
 
-  const [{ data: suppliers }, { data: itemsData }, { data: bankAccounts }, { data: categories }] =
+  const [{ data: suppliers }, itemsData, { data: bankAccounts }, { data: categories }] =
     await Promise.all([
       supabase.from("suppliers").select("id, code, name").eq("active", true).order("name"),
-      supabase
-        .from("items")
-        .select("id, code, name, base_unit, batch_tracked, item_units(unit_name, conversion_factor_to_base)")
-        .eq("active", true)
-        .order("name"),
+      fetchAll((from, to) =>
+        supabase
+          .from("items")
+          .select(
+            "id, code, name, base_unit, batch_tracked, sale_price, item_units(unit_name, conversion_factor_to_base)"
+          )
+          .eq("active", true)
+          .order("name")
+          .order("id")
+          .range(from, to)
+      ),
       supabase.from("bank_accounts").select("id, name").eq("active", true).order("name"),
       supabase.from("categories").select("id, name").order("name"),
     ]);
 
-  const items = (itemsData ?? []).map((item) => ({
+  const items = itemsData.map((item) => ({
     id: item.id,
     code: item.code,
     name: item.name,
     base_unit: item.base_unit,
     batch_tracked: item.batch_tracked,
+    sale_price: item.sale_price,
     units: item.item_units,
   }));
 
@@ -37,6 +45,7 @@ export default async function NewPurchasePage() {
         items={items}
         bankAccounts={bankAccounts ?? []}
         categories={categories ?? []}
+        isOwner={profile.role === "owner"}
       />
     </div>
   );

@@ -24,7 +24,7 @@ interface ItemFormProps {
     sale_price?: number | null;
     units: UnitInput[];
   };
-  onSubmit: (input: ItemInput) => Promise<{ error?: string; ok?: boolean; id?: string }>;
+  onSubmit: (input: ItemInput) => Promise<{ error?: string; ok?: boolean; id?: string; warning?: string }>;
   submitLabel: string;
 }
 
@@ -157,6 +157,7 @@ export function ItemForm({ categories, initial, onSubmit, submitLabel }: ItemFor
         setError(result.error);
         return;
       }
+      if (result?.warning) setError(result.warning);
 
       if (!initial) {
         // Create mode: reset and stay, ready for the next item -- matching
@@ -274,8 +275,9 @@ export function ItemForm({ categories, initial, onSubmit, submitLabel }: ItemFor
           className="w-full rounded-lg border border-border bg-surface px-4 py-3 text-right text-base tabular-nums text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
         />
         <p className="mt-1 text-xs text-muted">
-          Pre-fills the unit price on a bill (multiplied by the unit&rsquo;s size). Leave empty
-          if the price changes every time.
+          The price every bill starts with (times the unit&rsquo;s size for boxes, bags and so
+          on). A price typed on one bill changes that bill only, never this price. Leave empty if
+          the price is not decided yet &mdash; the till then shows &ldquo;Set price&rdquo;.
         </p>
       </div>
 

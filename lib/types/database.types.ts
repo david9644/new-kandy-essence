@@ -444,6 +444,20 @@ export type Database = {
         Update: never
         Relationships: []
       }
+      item_price_history: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          id: string
+          item_id: string
+          new_price: number | null
+          old_price: number | null
+          source: string
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
       item_units: {
         Row: {
           conversion_factor_to_base: number
@@ -1311,9 +1325,20 @@ export type Database = {
         }
         Returns: Json
       }
-      get_item_last_sale_price: {
-        Args: { p_item_id: string; p_unit_name: string }
-        Returns: number
+      set_item_sale_price: {
+        Args: { p_item_id: string; p_price: number; p_source?: string }
+        Returns: Json
+      }
+      get_item_price_list: {
+        Args: {
+          p_category?: string
+          p_limit?: number
+          p_offset?: number
+          p_only_unpriced?: boolean
+          p_search?: string
+          p_sort?: string
+        }
+        Returns: Json
       }
       record_invoice_print: {
         Args: { p_invoice_id: string }

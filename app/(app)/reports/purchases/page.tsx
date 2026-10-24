@@ -1,5 +1,6 @@
 import { requireProfile } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
+import { fetchAll } from "@/lib/supabase/fetch-all";
 import { PrintLayout } from "@/components/shared/print-layout";
 import { BackButton } from "@/components/shared/back-button";
 import { formatCurrency, formatQuantity } from "@/lib/units";
@@ -24,9 +25,11 @@ export default async function PurchaseReportPage({
   const toDate = to || todayIso();
 
   const supabase = await createClient();
-  const [{ data: suppliers }, { data: items }] = await Promise.all([
+  const [{ data: suppliers }, items] = await Promise.all([
     supabase.from("suppliers").select("id, code, name").order("name"),
-    supabase.from("items").select("id, code, name").order("name"),
+    fetchAll((from, to) =>
+      supabase.from("items").select("id, code, name").order("name").order("id").range(from, to)
+    ),
   ]);
 
   const filterForm = (

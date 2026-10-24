@@ -5,6 +5,7 @@ import { TypeAheadSearch } from "@/components/shared/type-ahead-search";
 import { PurchaseLineRow, emptyLine, lineTotal, type ItemOption, type LineState } from "./purchase-line-row";
 import { ChequeFields, type BankAccountOption } from "./cheque-fields";
 import { createPurchase } from "@/app/(app)/purchases/actions";
+import { setItemSalePrice } from "@/app/(app)/items/actions";
 import { formatCurrency } from "@/lib/units";
 import { KeyboardTextInput } from "@/components/keyboard/keyboard-text-input";
 import { KeyboardTextArea } from "@/components/keyboard/keyboard-textarea";
@@ -39,11 +40,13 @@ export function PurchaseForm({
   items,
   bankAccounts,
   categories,
+  isOwner,
 }: {
   suppliers: SupplierOption[];
   items: ItemOption[];
   bankAccounts: BankAccountOption[];
   categories: Category[];
+  isOwner: boolean;
 }) {
   const [supplier, setSupplier] = useState<SupplierOption | null>(null);
   const [quickAddSupplierQuery, setQuickAddSupplierQuery] = useState<string | null>(null);
@@ -60,6 +63,9 @@ export function PurchaseForm({
   const [lines, setLines] = useState<LineState[]>([emptyLine(nextKey())]);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [priceWarning, setPriceWarning] = useState<string | null>(null);
+  // items that got a selling price from this screen (they show no box again)
+  const [pricedIds, setPricedIds] = useState<Set<string>>(() => new Set());
   const [pending, startTransition] = useTransition();
 
   const grandTotal = useMemo(() => lines.reduce((sum, l) => sum + lineTotal(l), 0), [lines]);
@@ -90,6 +96,7 @@ export function PurchaseForm({
     e.preventDefault();
     setError(null);
     setSuccessMessage(null);
+    setPriceWarning(null);
 
     if (!supplier) {
       setError("Select a supplier.");
@@ -126,6 +133,33 @@ export function PurchaseForm({
       } else if (result?.ok) {
         setSuccessMessage(`Purchase of ${formatCurrency(total)} from ${supplierName} saved.`);
         reset();
+
+        // Selling prices are a SEPARATE step after the purchase is safely saved:
+        // a failure here never touches the purchase, it only shows a message.
+        if (isOwner) {
+          const wanted = new Map<string, { name: string; price: number }>();
+          for (const l of validLines) {
+            const raw = l.sellingPrice.trim();
+            if (!l.item || l.item.sale_price !== null || raw === "") continue;
+            const price = Number(raw);
+            wanted.set(l.item.id, { name: l.item.name, price });
+          }
+          const failed: string[] = [];
+          const done: string[] = [];
+          for (const [itemId, w] of wanted) {
+            const r = Number.isFinite(w.price) && w.price >= 0
+              ? await setItemSalePrice(itemId, w.price, "purchase")
+              : { error: "not a valid price" };
+            if ("error" in r) failed.push(`${w.name} (${r.error})`);
+            else done.push(itemId);
+          }
+          if (done.length > 0) setPricedIds((prev) => new Set([...prev, ...done]));
+          if (failed.length > 0) {
+            setPriceWarning(
+              `The purchase is saved, but these selling prices were not: ${failed.join(", ")}. Set them from the item page or the price list.`
+            );
+          }
+        }
       }
     });
   }
@@ -140,6 +174,9 @@ export function PurchaseForm({
         <p className="rounded-lg bg-success-surface px-3 py-2 text-sm text-success">
           {successMessage}
         </p>
+      )}
+      {priceWarning && (
+        <p className="rounded-lg bg-warning-surface px-3 py-2 text-sm text-warning">{priceWarning}</p>
       )}
 
       <div>
@@ -212,6 +249,8 @@ export function PurchaseForm({
               key={line.key}
               items={items}
               categories={categories}
+              isOwner={isOwner}
+              pricedIds={pricedIds}
               line={line}
               onChange={(next) => updateLine(line.key, next)}
               onRemove={() => removeLine(line.key)}

@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/types/database.types";
 import { NEAR_EXPIRY_DAYS, BUSINESS_TIMEZONE } from "@/lib/constants";
+import { fetchAll } from "@/lib/supabase/fetch-all";
 
 type Client = SupabaseClient<Database>;
 
@@ -14,14 +15,23 @@ export interface LowStockRow {
 }
 
 export async function getLowStockItems(supabase: Client): Promise<LowStockRow[]> {
-  const [{ data: items }, { data: summary }] = await Promise.all([
-    supabase.from("items").select("id, code, name, base_unit, reorder_level").eq("active", true),
-    supabase.from("item_stock_summary").select("item_id, total_quantity"),
+  const [items, summary] = await Promise.all([
+    fetchAll((from, to) =>
+      supabase
+        .from("items")
+        .select("id, code, name, base_unit, reorder_level")
+        .eq("active", true)
+        .order("id")
+        .range(from, to)
+    ),
+    fetchAll((from, to) =>
+      supabase.from("item_stock_summary").select("item_id, total_quantity").order("item_id").range(from, to)
+    ),
   ]);
 
-  const qtyByItem = new Map((summary ?? []).map((s) => [s.item_id, s.total_quantity ?? 0]));
+  const qtyByItem = new Map(summary.map((s) => [s.item_id, s.total_quantity ?? 0]));
 
-  return (items ?? [])
+  return items
     .map((item) => ({ ...item, total_quantity: qtyByItem.get(item.id) ?? 0 }))
     .filter((item) => item.total_quantity <= item.reorder_level)
     .sort((a, b) => a.total_quantity - a.reorder_level - (b.total_quantity - b.reorder_level));

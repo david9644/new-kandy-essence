@@ -14,7 +14,9 @@ export interface ItemInput {
   base_unit: string;
   reorder_level: number;
   batch_tracked: boolean;
-  /** Optional default selling price per base unit, used to pre-fill bills. */
+  /** Optional selling price per base unit. It is the ONLY price a bill starts
+   * with; it is written through set_item_sale_price (never directly) so every
+   * change lands in item_price_history. */
   sale_price?: number | null;
   units: UnitInput[];
 }
@@ -38,7 +40,34 @@ function validate(input: ItemInput): string | null {
   return null;
 }
 
-export async function createItem(input: ItemInput) {
+export type PriceSource = "item form" | "price list" | "purchase";
+
+/** Sets (or clears, with null) an item's selling price per base unit. Owner
+ * only: the database function re-checks the role, the range, and writes the
+ * history row in the same transaction. */
+export async function setItemSalePrice(
+  itemId: string,
+  price: number | null,
+  source: PriceSource
+): Promise<{ ok: true; changed: boolean } | { error: string }> {
+  if (price !== null && !(Number.isFinite(price) && price >= 0)) {
+    return { error: "Selling price must be empty or zero or more." };
+  }
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("set_item_sale_price", {
+    p_item_id: itemId,
+    p_price: price as number,
+    p_source: source,
+  });
+  if (error) return { error: error.message };
+  const result = data as { changed?: boolean } | null;
+  revalidatePath("/items");
+  revalidatePath("/items/prices");
+  revalidatePath(`/items/${itemId}`);
+  return { ok: true, changed: result?.changed ?? false };
+}
+
+export async function createItem(input: ItemInput, source: PriceSource = "item form") {
   const error = validate(input);
   if (error) return { error };
 
@@ -53,7 +82,6 @@ export async function createItem(input: ItemInput) {
       base_unit: input.base_unit.trim(),
       reorder_level: input.reorder_level,
       batch_tracked: input.batch_tracked,
-      sale_price: input.sale_price ?? null,
     })
     .select("id, code")
     .single();
@@ -73,8 +101,18 @@ export async function createItem(input: ItemInput) {
     if (unitsError) return { error: unitsError.message };
   }
 
+  // The price goes through the one price function (history included). The
+  // item already exists, so a failure here is a warning, not a failed create.
+  let warning: string | undefined;
+  if (input.sale_price != null) {
+    const priced = await setItemSalePrice(item.id, input.sale_price, source);
+    if ("error" in priced) {
+      warning = `Item created, but the selling price was not saved (${priced.error}). Set it from the item page.`;
+    }
+  }
+
   revalidatePath("/items");
-  return { ok: true, id: item.id, code: item.code };
+  return { ok: true, id: item.id, code: item.code, warning };
 }
 
 export async function updateItem(itemId: string, input: ItemInput) {
@@ -91,7 +129,6 @@ export async function updateItem(itemId: string, input: ItemInput) {
       base_unit: input.base_unit.trim(),
       reorder_level: input.reorder_level,
       batch_tracked: input.batch_tracked,
-      sale_price: input.sale_price ?? null,
     })
     .eq("id", itemId);
 
@@ -114,9 +151,16 @@ export async function updateItem(itemId: string, input: ItemInput) {
     if (unitsError) return { error: unitsError.message };
   }
 
+  // Same single price function as everywhere else; unchanged price = no history row.
+  let warning: string | undefined;
+  const priced = await setItemSalePrice(itemId, input.sale_price ?? null, "item form");
+  if ("error" in priced) {
+    warning = `Saved, but the selling price was not changed (${priced.error}).`;
+  }
+
   revalidatePath("/items");
   revalidatePath(`/items/${itemId}`);
-  return { ok: true };
+  return { ok: true, warning };
 }
 
 export async function setItemActive(itemId: string, active: boolean) {

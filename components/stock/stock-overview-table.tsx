@@ -16,8 +16,13 @@ export interface StockRow {
   total_value: number;
 }
 
+// Rows drawn at once: 3,000 items as one table is ~24,000 page elements (about
+// a third of a second to draw), so it shows a page and "Show more".
+const ROW_PAGE = 100;
+
 export function StockOverviewTable({ rows }: { rows: StockRow[] }) {
   const [query, setQuery] = useState("");
+  const [shown, setShown] = useState(ROW_PAGE);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -31,7 +36,10 @@ export function StockOverviewTable({ rows }: { rows: StockRow[] }) {
     <div>
       <KeyboardTextInput
         value={query}
-        onChange={setQuery}
+        onChange={(v) => {
+          setQuery(v);
+          setShown(ROW_PAGE);
+        }}
         placeholder="Search by name or code..."
         className="mb-4 w-full rounded-lg border border-border bg-surface px-4 py-3 text-base text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
       />
@@ -46,7 +54,7 @@ export function StockOverviewTable({ rows }: { rows: StockRow[] }) {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((row) => {
+            {filtered.slice(0, shown).map((row) => {
               const low = row.total_quantity <= row.reorder_level;
               const avgCost = row.total_quantity !== 0 ? row.total_value / row.total_quantity : 0;
               const secondaryQty = row.secondary_unit
@@ -90,6 +98,15 @@ export function StockOverviewTable({ rows }: { rows: StockRow[] }) {
           </tbody>
         </table>
       </div>
+      {filtered.length > shown && (
+        <button
+          type="button"
+          onClick={() => setShown((n) => n + ROW_PAGE)}
+          className="mt-3 flex h-12 w-full items-center justify-center rounded-xl border border-border bg-surface text-sm font-medium text-foreground active:bg-background"
+        >
+          Show more ({filtered.length - shown} more)
+        </button>
+      )}
     </div>
   );
 }

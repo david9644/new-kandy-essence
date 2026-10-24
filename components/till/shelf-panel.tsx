@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { KeyboardTextInput } from "@/components/keyboard/keyboard-text-input";
 import { formatQuantity } from "@/lib/units";
 import { formatRs } from "@/lib/till/format";
@@ -8,11 +8,14 @@ import {
   ALL_CATEGORY,
   OTHER_CATEGORY,
   categoryHue,
-  exactCodeMatch,
+  TILE_PAGE_SIZE,
+  exactCodeIndexed,
   filterByCategory,
   hasMissingPrice,
-  searchItems,
-  suggestionsFor,
+  indexItems,
+  pageOf,
+  searchIndexed,
+  suggestionsIndexed,
   type ShelfCategory,
   type ShelfItem,
   type ShelfUnit,
@@ -30,7 +33,7 @@ function tileStyle(hue: number | null): React.CSSProperties {
 }
 
 function fallbackUnit(item: ShelfItem): ShelfUnit {
-  return { unit_name: item.base_unit, factor: 1, price: null, source: null };
+  return { unit_name: item.base_unit, factor: 1, price: null };
 }
 
 function PriceText({ unit, strong }: { unit: ShelfUnit; strong?: boolean }) {
@@ -44,7 +47,6 @@ function PriceText({ unit, strong }: { unit: ShelfUnit; strong?: boolean }) {
   return (
     <span className={`text-sm tabular-nums ${strong ? "font-medium text-foreground" : "text-muted"}`}>
       {formatRs(unit.price)}
-      {unit.source === "last" && <span className="ml-1 text-[10px] uppercase text-muted">last</span>}
     </span>
   );
 }
@@ -127,6 +129,18 @@ export const ShelfPanel = memo(function ShelfPanel({
   const [query, setQuery] = useState("");
   const [submitted, setSubmitted] = useState<string | null>(null);
   const [suggestOpen, setSuggestOpen] = useState(false);
+  // How many tiles are drawn: one page, then "Show more" adds another.
+  const [shown, setShown] = useState(TILE_PAGE_SIZE);
+  // What the suggestions are computed from: the typed text, a moment later,
+  // so fast typing on a big shelf never searches on every keystroke.
+  const [debounced, setDebounced] = useState("");
+  useEffect(() => {
+    const t = window.setTimeout(() => setDebounced(query), 120);
+    return () => window.clearTimeout(t);
+  }, [query]);
+
+  // names/codes lower-cased once per shelf, not once per keystroke
+  const index = useMemo(() => indexItems(items), [items]);
 
   const hasOther = useMemo(() => items.some((i) => i.category_id === null), [items]);
   const sortedCategories = useMemo(
@@ -134,11 +148,12 @@ export const ShelfPanel = memo(function ShelfPanel({
     [categories]
   );
 
-  const visible = useMemo(
-    () => (submitted !== null ? searchItems(items, submitted) : filterByCategory(items, category)),
-    [items, category, submitted]
+  const matching = useMemo(
+    () => (submitted !== null ? searchIndexed(index, submitted, 500) : filterByCategory(items, category)),
+    [index, items, category, submitted]
   );
-  const suggestions = useMemo(() => suggestionsFor(items, query), [items, query]);
+  const { visible, remaining } = useMemo(() => pageOf(matching, shown), [matching, shown]);
+  const suggestions = useMemo(() => suggestionsIndexed(index, debounced), [index, debounced]);
   const showHint = useMemo(() => visible.some(hasMissingPrice), [visible]);
 
   function pickSuggestion(item: ShelfItem) {
@@ -152,12 +167,13 @@ export const ShelfPanel = memo(function ShelfPanel({
     setSuggestOpen(false);
     const q = query.trim();
     setSubmitted(q === "" ? null : q);
+    setShown(TILE_PAGE_SIZE);
   }
 
   function enter() {
     // Enter is a scan only when the text is exactly an item code; anything else
     // is just "Find" (never a silent pick of the first suggestion).
-    const hit = exactCodeMatch(items, query);
+    const hit = exactCodeIndexed(index, query);
     if (hit) pickSuggestion(hit);
     else find();
   }
@@ -167,6 +183,7 @@ export const ShelfPanel = memo(function ShelfPanel({
     setSubmitted(null);
     setQuery("");
     setSuggestOpen(false);
+    setShown(TILE_PAGE_SIZE);
   }
 
   return (
@@ -253,17 +270,17 @@ export const ShelfPanel = memo(function ShelfPanel({
       <div className="min-h-0 flex-1 overflow-y-auto pb-2">
         {submitted !== null && (
           <p className="mb-2 text-sm text-muted">
-            {visible.length} {visible.length === 1 ? "result" : "results"} for &lsquo;{submitted}
+            {matching.length} {matching.length === 1 ? "result" : "results"} for &lsquo;{submitted}
             &rsquo; &middot; pick a category above to see the grid again.
           </p>
         )}
         {showHint && (
           <p className="mb-2 text-xs text-muted">
-            Tiles marked &lsquo;Set price&rsquo; have no price yet &mdash; tap one, then type the price
-            on the bill.
+            Tiles marked &lsquo;Set price&rsquo; have no price yet &mdash; tap one and type the price
+            for this bill, or set it for good in Items &rarr; Price list.
           </p>
         )}
-        {visible.length === 0 ? (
+        {matching.length === 0 ? (
           <p className="rounded-2xl border border-dashed border-border px-4 py-10 text-center text-sm text-muted">
             {submitted !== null ? "No items match that search." : "No items in this category."}
           </p>
@@ -276,6 +293,15 @@ export const ShelfPanel = memo(function ShelfPanel({
               <ItemTile key={item.id} item={item} onPick={onPick} />
             ))}
           </div>
+        )}
+        {remaining > 0 && (
+          <button
+            type="button"
+            onClick={() => setShown((n) => n + TILE_PAGE_SIZE)}
+            className="mt-3 flex h-12 w-full items-center justify-center rounded-xl border border-border bg-surface text-sm font-medium text-foreground active:bg-background"
+          >
+            Show more ({remaining} more)
+          </button>
         )}
       </div>
     </div>

@@ -65,13 +65,13 @@ export default async function EditBillPage({
       category_id: i.category_id,
       base_unit: i.base_unit,
       stock: 0,
+      sold_90d: 0,
       units: [
-        { unit_name: i.base_unit, factor: 1, price: null, source: null },
+        { unit_name: i.base_unit, factor: 1, price: null },
         ...i.item_units.map((u) => ({
           unit_name: u.unit_name,
           factor: u.conversion_factor_to_base,
           price: null,
-          source: null,
         })),
       ],
     }));

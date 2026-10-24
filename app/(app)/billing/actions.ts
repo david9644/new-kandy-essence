@@ -158,17 +158,6 @@ export async function cancelInvoice(invoiceId: string, deletePin: string) {
   redirect("/billing");
 }
 
-// Auto-fill fallback: what this item was last billed at in this unit.
-export async function getLastSalePrice(itemId: string, unitName: string): Promise<number | null> {
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("get_item_last_sale_price", {
-    p_item_id: itemId,
-    p_unit_name: unitName,
-  });
-  if (error) return null;
-  return data ?? null;
-}
-
 export async function quickAddCustomer(name: string, contact: string) {
   if (!name.trim()) return { error: "Name is required." };
   const supabase = await createClient();

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireProfile } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
+import { fetchAll } from "@/lib/supabase/fetch-all";
 import { StockOutForm } from "@/components/stock/stock-out-form";
 import { formatQuantity } from "@/lib/units";
 
@@ -8,12 +9,16 @@ export default async function StockOutPage() {
   const profile = await requireProfile();
   const supabase = await createClient();
 
-  const [{ data: itemsData }, { data: recent }] = await Promise.all([
-    supabase
-      .from("items")
-      .select("id, code, name, base_unit, item_units(unit_name, conversion_factor_to_base)")
-      .eq("active", true)
-      .order("name"),
+  const [itemsData, { data: recent }] = await Promise.all([
+    fetchAll((from, to) =>
+      supabase
+        .from("items")
+        .select("id, code, name, base_unit, item_units(unit_name, conversion_factor_to_base)")
+        .eq("active", true)
+        .order("name")
+        .order("id")
+        .range(from, to)
+    ),
     supabase
       .from("stock_out")
       .select("id, quantity, unit_name, date, items(name)")
@@ -23,7 +28,7 @@ export default async function StockOutPage() {
       .limit(20),
   ]);
 
-  const items = (itemsData ?? []).map((item) => ({
+  const items = itemsData.map((item) => ({
     id: item.id,
     code: item.code,
     name: item.name,

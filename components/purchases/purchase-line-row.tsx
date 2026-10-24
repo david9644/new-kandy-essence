@@ -13,6 +13,8 @@ export interface ItemOption {
   name: string;
   base_unit: string;
   batch_tracked: boolean;
+  /** Selling price per base unit; null = the item has none yet. */
+  sale_price: number | null;
   units: { unit_name: string; conversion_factor_to_base: number }[];
 }
 
@@ -29,6 +31,8 @@ export interface LineState {
   quantity: string;
   unitName: string;
   unitCost: string;
+  /** Owner only: optional selling price per base unit, for an item that has none. */
+  sellingPrice: string;
 }
 
 export function emptyLine(key: string): LineState {
@@ -40,6 +44,7 @@ export function emptyLine(key: string): LineState {
     quantity: "",
     unitName: "",
     unitCost: "",
+    sellingPrice: "",
   };
 }
 
@@ -52,12 +57,17 @@ export function lineTotal(line: LineState): number {
 export function PurchaseLineRow({
   items,
   categories,
+  isOwner,
+  pricedIds,
   line,
   onChange,
   onRemove,
 }: {
   items: ItemOption[];
   categories: Category[];
+  isOwner: boolean;
+  /** Items given a selling price from this screen already (no box again). */
+  pricedIds: Set<string>;
   line: LineState;
   onChange: (next: LineState) => void;
   onRemove: () => void;
@@ -83,6 +93,7 @@ export function PurchaseLineRow({
           <QuickAddItemModal
             initialName={quickAddItemQuery}
             categories={categories}
+            canSetPrice={isOwner}
             onClose={() => setQuickAddItemQuery(null)}
             onCreated={(newItem) => {
               onChange({ ...line, item: newItem, unitName: newItem.base_unit });
@@ -169,6 +180,23 @@ export function PurchaseLineRow({
           />
         </div>
       </div>
+
+      {isOwner && line.item.sale_price === null && !pricedIds.has(line.item.id) && (
+        <div className="mt-3 rounded-lg border border-dashed border-border bg-surface p-3">
+          <label className="mb-1 block text-xs font-medium text-foreground">
+            Selling price per {line.item.base_unit} (optional)
+          </label>
+          <KeyboardNumberInput
+            value={line.sellingPrice}
+            onChange={(v) => onChange({ ...line, sellingPrice: v })}
+            className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-right text-sm tabular-nums text-foreground focus:border-primary focus:outline-none"
+          />
+          <p className="mt-1 text-[11px] text-muted">
+            The price you SELL this item for on a bill, not the buying price above. This item has no
+            selling price yet; saved after the purchase.
+          </p>
+        </div>
+      )}
 
       <p className="mt-2 text-right text-sm font-medium text-foreground">
         Line total: {formatCurrency(lineTotal(line))}

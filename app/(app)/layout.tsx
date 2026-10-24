@@ -30,6 +30,7 @@ const PRIMARY_NAV_ITEMS: Array<{
 // now, not as a separate global screen.
 const MORE_NAV_ITEMS: Array<{ href: string; label: string; ownerOnly?: boolean }> = [
   { href: "/items", label: "Items" },
+  { href: "/items/prices", label: "Price list", ownerOnly: true },
   { href: "/stock/opening", label: "Opening Stock", ownerOnly: true },
   { href: "/stock/adjustments", label: "Adjustments", ownerOnly: true },
   { href: "/users", label: "Users", ownerOnly: true },

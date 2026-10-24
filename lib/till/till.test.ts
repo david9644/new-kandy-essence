@@ -7,7 +7,11 @@ import {
   categoryHue,
   exactCodeMatch,
   filterByCategory,
+  TILE_PAGE_SIZE,
+  indexItems,
   normalizeShelf,
+  pageOf,
+  searchIndexed,
   searchItems,
   suggestionsFor,
   type ShelfItem,
@@ -29,7 +33,8 @@ function item(over: Partial<ShelfItem> & { id: string; name: string }): ShelfIte
     category_id: null,
     base_unit: "pack",
     stock: 10,
-    units: [{ unit_name: "pack", factor: 1, price: 100, source: "default" }],
+    sold_90d: 0,
+    units: [{ unit_name: "pack", factor: 1, price: 100 }],
     ...over,
   };
 }
@@ -45,8 +50,8 @@ const ITEMS: ShelfItem[] = [
     category_id: "catB",
     base_unit: "kg",
     units: [
-      { unit_name: "kg", factor: 1, price: null, source: null },
-      { unit_name: "bag", factor: 25, price: null, source: null },
+      { unit_name: "kg", factor: 1, price: null },
+      { unit_name: "bag", factor: 25, price: null },
     ],
   }),
 ];
@@ -329,4 +334,93 @@ test("settle: a value, a rejection, a timeout, and a late value after timeout", 
 test("formatRs", () => {
   assert.equal(formatRs(250), "Rs 250.00");
   assert.equal(formatRs(1250.5), "Rs 1,250.50");
+});
+
+// ── shelf: payload shape, ordering, paging, indexed search ───────────────
+
+test("normalizeShelf keeps ONLY the known keys: cost-like data in the payload never reaches the till", () => {
+  const shelf = normalizeShelf({
+    categories: [{ id: "c", name: "N", cost: 5 }],
+    items: [
+      {
+        id: "i",
+        code: "NKE-1",
+        name: "X",
+        category_id: null,
+        base_unit: "pack",
+        stock: 1,
+        sold_90d: "7",
+        last_purchase_cost: 99,
+        total_value: 1000,
+        units: [{ unit_name: "pack", factor: 1, price: 5, last_cost: 4, source: "last" }],
+      },
+    ],
+  });
+  assert.deepEqual(Object.keys(shelf).sort(), ["categories", "items"]);
+  assert.deepEqual(Object.keys(shelf.categories[0]).sort(), ["id", "name"]);
+  assert.deepEqual(Object.keys(shelf.items[0]).sort(), [
+    "base_unit",
+    "category_id",
+    "code",
+    "id",
+    "name",
+    "sold_90d",
+    "stock",
+    "units",
+  ]);
+  assert.deepEqual(Object.keys(shelf.items[0].units[0]).sort(), ["factor", "price", "unit_name"]);
+  assert.equal(shelf.items[0].sold_90d, 7);
+  assert.equal(JSON.stringify(shelf).match(/cost|value|last/i), null);
+});
+
+test("a unit with no price stays null: nothing invents a price", () => {
+  const shelf = normalizeShelf({
+    categories: [],
+    items: [{ id: "i", code: "c", name: "n", base_unit: "pc", units: [{ unit_name: "pc", factor: 1, price: null }] }],
+  });
+  assert.equal(shelf.items[0].units[0].price, null);
+});
+
+function bigShelf(n: number): ShelfItem[] {
+  return Array.from({ length: n }, (_, i) =>
+    item({ id: String(i), name: `Item ${String(i).padStart(4, "0")} ${i % 7 === 0 ? "rice" : "flour"}`, category_id: "c" + (i % 12) })
+  );
+}
+
+test("search over an indexed shelf: code, prefix, word start, contains; shelf order breaks ties", () => {
+  const items = bigShelf(3000);
+  const index = indexItems(items);
+  assert.equal(searchIndexed(index, "NKE-42")[0].id, "42", "exact code first");
+  const rice = searchIndexed(index, "rice", 5);
+  assert.deepEqual(rice.map((i) => i.id), ["0", "7", "14", "21", "28"], "ties keep the most-sold-first shelf order");
+  assert.equal(searchIndexed(index, "item 0042")[0].id, "42");
+  assert.deepEqual(searchIndexed(index, "zzzz"), []);
+  assert.deepEqual(searchIndexed(index, "   "), []);
+});
+
+test("paging: first page of tiles, the rest behind Show more", () => {
+  const list = bigShelf(3000);
+  const p1 = pageOf(list, TILE_PAGE_SIZE);
+  assert.equal(p1.visible.length, TILE_PAGE_SIZE);
+  assert.equal(p1.remaining, 3000 - TILE_PAGE_SIZE);
+  const p2 = pageOf(list, TILE_PAGE_SIZE * 2);
+  assert.equal(p2.visible.length, TILE_PAGE_SIZE * 2);
+  assert.equal(p2.visible[0], list[0], "paging never reorders");
+  assert.deepEqual(pageOf(list.slice(0, 10), TILE_PAGE_SIZE), { visible: list.slice(0, 10), remaining: 0 });
+});
+
+test("search and category filter stay fast on 3,000 items (well under 300 ms, measured per call)", () => {
+  const items = bigShelf(3000);
+  const t0 = performance.now();
+  const index = indexItems(items);
+  const tIndex = performance.now() - t0;
+  const t1 = performance.now();
+  for (let i = 0; i < 50; i++) searchIndexed(index, "rice");
+  const perSearch = (performance.now() - t1) / 50;
+  const t2 = performance.now();
+  for (let i = 0; i < 50; i++) filterByCategory(items, "c3");
+  const perFilter = (performance.now() - t2) / 50;
+  assert.ok(tIndex < 100, `index build ${tIndex.toFixed(1)} ms`);
+  assert.ok(perSearch < 20, `search ${perSearch.toFixed(2)} ms`);
+  assert.ok(perFilter < 20, `filter ${perFilter.toFixed(2)} ms`);
 });

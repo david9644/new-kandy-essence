@@ -19,6 +19,8 @@ export interface QuickItem {
   name: string;
   base_unit: string;
   batch_tracked: boolean;
+  /** Selling price per base unit, or null when none was entered. */
+  sale_price: number | null;
   units: { unit_name: string; conversion_factor_to_base: number }[];
 }
 
@@ -28,11 +30,14 @@ export interface QuickItem {
 export function QuickAddItemModal({
   initialName,
   categories,
+  canSetPrice,
   onClose,
   onCreated,
 }: {
   initialName: string;
   categories: Category[];
+  /** Owner only: shows the optional selling price box. */
+  canSetPrice: boolean;
   onClose: () => void;
   onCreated: (item: QuickItem) => void;
 }) {
@@ -43,6 +48,7 @@ export function QuickAddItemModal({
   const [baseUnit, setBaseUnit] = useState("");
   const [reorderLevel, setReorderLevel] = useState("0");
   const [batchTracked, setBatchTracked] = useState(true);
+  const [salePrice, setSalePrice] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -56,14 +62,19 @@ export function QuickAddItemModal({
     e.stopPropagation();
     setError(null);
     startTransition(async () => {
-      const result = await createItem({
-        name,
-        category_id: categoryId || null,
-        base_unit: baseUnit,
-        reorder_level: Number(reorderLevel) || 0,
-        batch_tracked: batchTracked,
-        units: [],
-      });
+      const price = canSetPrice && salePrice.trim() !== "" ? Number(salePrice) : null;
+      const result = await createItem(
+        {
+          name,
+          category_id: categoryId || null,
+          base_unit: baseUnit,
+          reorder_level: Number(reorderLevel) || 0,
+          batch_tracked: batchTracked,
+          sale_price: price,
+          units: [],
+        },
+        "purchase"
+      );
       if (result?.error || !result?.id || !result?.code) {
         setError(result?.error ?? "Could not create item.");
         return;
@@ -74,6 +85,8 @@ export function QuickAddItemModal({
         name: name.trim(),
         base_unit: baseUnit,
         batch_tracked: batchTracked,
+        // only counts as priced when the server actually saved it
+        sale_price: price !== null && !result.warning ? price : null,
         units: [],
       });
     });
@@ -153,6 +166,22 @@ export function QuickAddItemModal({
             </button>
           </div>
         </div>
+
+        {canSetPrice && (
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-foreground">
+              Selling price per {baseUnit || "base unit"} (optional)
+            </label>
+            <KeyboardNumberInput
+              value={salePrice}
+              onChange={setSalePrice}
+              className="w-full rounded-lg border border-border bg-surface px-4 py-3 text-right text-base tabular-nums text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            />
+            <p className="mt-1 text-xs text-muted">
+              The price you SELL it for on a bill, not what you pay the supplier.
+            </p>
+          </div>
+        )}
 
         <label className="flex min-h-[44px] items-center gap-3 text-sm font-medium text-foreground">
           <input

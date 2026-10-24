@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireOwner } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
+import { fetchAll } from "@/lib/supabase/fetch-all";
 import { StockAdjustmentForm } from "@/components/stock/stock-adjustment-form";
 import { formatQuantity } from "@/lib/units";
 
@@ -8,8 +9,16 @@ export default async function StockAdjustmentsPage() {
   await requireOwner();
   const supabase = await createClient();
 
-  const [{ data: items }, { data: recent }] = await Promise.all([
-    supabase.from("items").select("id, code, name, base_unit").eq("active", true).order("name"),
+  const [items, { data: recent }] = await Promise.all([
+    fetchAll((from, to) =>
+      supabase
+        .from("items")
+        .select("id, code, name, base_unit")
+        .eq("active", true)
+        .order("name")
+        .order("id")
+        .range(from, to)
+    ),
     supabase
       .from("stock_adjustments")
       .select("id, quantity_change, reason, date, items(name, base_unit)")
@@ -25,7 +34,7 @@ export default async function StockAdjustmentsPage() {
         Correct a count -- damage, wastage, or a miscount found during the manual-to-digital
         transition.
       </p>
-      <StockAdjustmentForm items={items ?? []} />
+      <StockAdjustmentForm items={items} />
 
       <h2 className="mb-2 mt-8 text-lg font-medium text-foreground">Recent Adjustments</h2>
       <ul className="divide-y divide-border rounded-xl border border-border bg-surface">

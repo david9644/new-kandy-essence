@@ -4,9 +4,10 @@
 export interface ShelfUnit {
   unit_name: string;
   factor: number;
-  /** Effective price for ONE of this unit, null = "Set price". */
+  /** Price for ONE of this unit: the item's own selling price x the unit's size.
+   * null = the item has no selling price yet ("Set price"). Never a price from a
+   * previous bill. */
   price: number | null;
-  source: "default" | "last" | null;
 }
 
 export interface ShelfItem {
@@ -17,6 +18,9 @@ export interface ShelfItem {
   base_unit: string;
   /** Base units on hand. */
   stock: number;
+  /** Non-deleted bill lines for this item in the last 90 days (the server also
+   * returns the shelf most-sold first). */
+  sold_90d: number;
   units: ShelfUnit[];
 }
 
@@ -45,11 +49,11 @@ export function normalizeShelf(raw: unknown): Shelf {
       category_id: (i.category_id as string | null) ?? null,
       base_unit: String(i.base_unit),
       stock: Number(i.stock ?? 0),
+      sold_90d: Number(i.sold_90d ?? 0),
       units: ((i.units as Array<Record<string, unknown>> | null) ?? []).map((u) => ({
         unit_name: String(u.unit_name),
         factor: Number(u.factor),
         price: u.price === null || u.price === undefined ? null : Number(u.price),
-        source: (u.source as ShelfUnit["source"]) ?? null,
       })),
     })),
   };
@@ -83,39 +87,78 @@ export function filterByCategory(items: ShelfItem[], categoryId: string): ShelfI
   return items.filter((i) => i.category_id === categoryId);
 }
 
-function rank(item: ShelfItem, q: string): number {
-  const name = item.name.toLowerCase();
-  const code = item.code.toLowerCase();
-  if (code === q) return 0;
-  if (name.startsWith(q)) return 1;
-  if (name.split(/\s+/).some((w) => w.startsWith(q))) return 2;
-  if (name.includes(q) || code.includes(q)) return 3;
+/** The shelf with names/codes lower-cased ONCE, so a keystroke never lower-cases
+ * thousands of strings. `pos` is the item's place in the (most-sold first)
+ * shelf order, used as the tie-break so popular items stay on top. */
+export interface IndexedItem {
+  item: ShelfItem;
+  name: string;
+  code: string;
+  words: string[];
+  pos: number;
+}
+
+export function indexItems(items: ShelfItem[]): IndexedItem[] {
+  return items.map((item, pos) => {
+    const name = item.name.toLowerCase();
+    return { item, name, code: item.code.toLowerCase(), words: name.split(/\s+/), pos };
+  });
+}
+
+function rank(x: IndexedItem, q: string): number {
+  if (x.code === q) return 0;
+  if (x.name.startsWith(q)) return 1;
+  for (const w of x.words) if (w.startsWith(q)) return 2;
+  if (x.name.includes(q) || x.code.includes(q)) return 3;
   return -1;
 }
 
-/** Name / code search over the held shelf, best matches first. */
-export function searchItems(items: ShelfItem[], query: string, limit = 200): ShelfItem[] {
+/** Name / code search over the indexed shelf: best matches first, then the
+ * shelf's own order (most sold first). */
+export function searchIndexed(index: IndexedItem[], query: string, limit = 200): ShelfItem[] {
   const q = query.trim().toLowerCase();
   if (!q) return [];
-  return items
-    .map((item) => ({ item, r: rank(item, q) }))
-    .filter((x) => x.r >= 0)
-    .sort((a, b) => a.r - b.r || a.item.name.localeCompare(b.item.name))
-    .slice(0, limit)
-    .map((x) => x.item);
+  const hits: { x: IndexedItem; r: number }[] = [];
+  for (const x of index) {
+    const r = rank(x, q);
+    if (r >= 0) hits.push({ x, r });
+  }
+  hits.sort((a, b) => a.r - b.r || a.x.pos - b.x.pos);
+  return hits.slice(0, limit).map((h) => h.x.item);
 }
 
 /** Suggestions as the cashier types: from two characters, a handful. */
-export function suggestionsFor(items: ShelfItem[], query: string, limit = 8): ShelfItem[] {
+export function suggestionsIndexed(index: IndexedItem[], query: string, limit = 8): ShelfItem[] {
   if (query.trim().length < 2) return [];
-  return searchItems(items, query, limit);
+  return searchIndexed(index, query, limit);
 }
 
 /** Enter in the search box: only an EXACT item code counts as a scan. */
-export function exactCodeMatch(items: ShelfItem[], text: string): ShelfItem | null {
+export function exactCodeIndexed(index: IndexedItem[], text: string): ShelfItem | null {
   const t = text.trim().toLowerCase();
   if (!t) return null;
-  return items.find((i) => i.code.toLowerCase() === t) ?? null;
+  return index.find((x) => x.code === t)?.item ?? null;
+}
+
+// Convenience wrappers on a plain item list (tests, one-off use).
+export function searchItems(items: ShelfItem[], query: string, limit = 200): ShelfItem[] {
+  return searchIndexed(indexItems(items), query, limit);
+}
+export function suggestionsFor(items: ShelfItem[], query: string, limit = 8): ShelfItem[] {
+  return suggestionsIndexed(indexItems(items), query, limit);
+}
+export function exactCodeMatch(items: ShelfItem[], text: string): ShelfItem | null {
+  return exactCodeIndexed(indexItems(items), text);
+}
+
+// ── paging ──────────────────────────────────────────────────────────────
+
+/** Tiles drawn at once; "Show more" adds another page. */
+export const TILE_PAGE_SIZE = 60;
+
+export function pageOf<T>(list: T[], shown: number): { visible: T[]; remaining: number } {
+  const n = Math.max(0, Math.min(list.length, shown));
+  return { visible: list.slice(0, n), remaining: list.length - n };
 }
 
 export function firstPrice(item: ShelfItem): number | null {
