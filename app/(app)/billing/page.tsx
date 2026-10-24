@@ -3,42 +3,60 @@ import { requireProfile } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { formatCurrency } from "@/lib/units";
 import { todayIso } from "@/lib/billing-data";
+import { oneMonthBefore } from "@/lib/dates";
 
-const MAX_ROWS = 300;
+const PAGE_SIZE = 50;
 
 export default async function BillingListPage({
   searchParams,
 }: {
-  searchParams: Promise<{ from?: string; to?: string; q?: string }>;
+  searchParams: Promise<{ from?: string; to?: string; q?: string; page?: string }>;
 }) {
-  const { from, to, q } = await searchParams;
+  const { from, to, q, page: pageParam } = await searchParams;
   await requireProfile();
   const supabase = await createClient();
 
   const today = todayIso();
-  const fromDate = from || today;
+  // The list opens on the last month (same day one month back, Asia/Colombo).
+  const fromDate = from || oneMonthBefore(today);
   const toDate = to || today;
+  const page = Math.max(1, Math.floor(Number(pageParam) || 1));
   // PostgREST's or() filter uses , ( ) as syntax -- strip them from free text
   const search = (q ?? "").replace(/[,()%*]/g, " ").trim();
 
   // Deleted bills never come back: RLS only lets 'issued' invoices through.
   let query = supabase
     .from("invoices")
-    .select("id, invoice_no, date, customer_name, customer_code, total, paid_amount, credit_amount")
+    .select("id, invoice_no, date, customer_name, customer_code, total, paid_amount, credit_amount", {
+      count: "exact",
+    })
     .gte("date", fromDate)
     .lte("date", toDate)
     .order("date", { ascending: false })
     .order("created_at", { ascending: false })
-    .limit(MAX_ROWS);
+    .order("id", { ascending: false })
+    .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
   if (search) {
     query = query.or(
       `invoice_no.ilike.%${search}%,customer_name.ilike.%${search}%,customer_code.ilike.%${search}%`
     );
   }
-  const { data: invoices } = await query;
+  const { data: invoices, count } = await query;
 
   const rows = invoices ?? [];
   const totalSum = rows.reduce((sum, r) => sum + r.total, 0);
+  const totalRows = count ?? rows.length;
+  const pages = Math.max(1, Math.ceil(totalRows / PAGE_SIZE));
+
+  function pageHref(p: number): string {
+    const params = new URLSearchParams();
+    if (from) params.set("from", from);
+    if (to) params.set("to", to);
+    if (q) params.set("q", q);
+    if (p > 1) params.set("page", String(p));
+    const qs = params.toString();
+    return qs ? `/billing?${qs}` : "/billing";
+  }
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -142,8 +160,8 @@ export default async function BillingListPage({
             <tfoot>
               <tr className="border-t border-border bg-background text-sm font-medium">
                 <td className="px-4 py-3 text-muted" colSpan={3}>
-                  {rows.length} {rows.length === 1 ? "bill" : "bills"}
-                  {rows.length === MAX_ROWS ? " (showing the latest 300)" : ""}
+                  {totalRows} {totalRows === 1 ? "bill" : "bills"}
+                  {pages > 1 ? ` · page ${Math.min(page, pages)} of ${pages} · total below is for this page` : ""}
                 </td>
                 <td className="px-4 py-3 text-right tabular-nums text-foreground">
                   {formatCurrency(totalSum)}
@@ -154,6 +172,26 @@ export default async function BillingListPage({
           )}
         </table>
       </div>
+      {pages > 1 && (
+        <div className="mt-3 flex items-center justify-end gap-2 text-sm">
+          {page > 1 && (
+            <Link
+              href={pageHref(page - 1)}
+              className="flex h-11 items-center rounded-lg border border-border px-4 font-medium text-foreground"
+            >
+              &larr; Previous
+            </Link>
+          )}
+          {page < pages && (
+            <Link
+              href={pageHref(page + 1)}
+              className="flex h-11 items-center rounded-lg border border-border px-4 font-medium text-foreground"
+            >
+              Next &rarr;
+            </Link>
+          )}
+        </div>
+      )}
     </div>
   );
 }

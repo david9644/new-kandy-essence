@@ -6,6 +6,9 @@ import { createClient } from "@/lib/supabase/server";
 import { deleteFailure, type DeletePinCode } from "@/lib/delete-pin";
 import type { Json } from "@/lib/types/database.types";
 import { normalizeShelf, type Shelf } from "@/lib/till/shelf";
+import { plainBillError } from "@/lib/billing-errors";
+import { getCurrentProfile } from "@/lib/auth/session";
+import { createItem, createCategory } from "@/app/(app)/items/actions";
 
 export interface BillLineInput {
   item_id: string;
@@ -94,7 +97,7 @@ export async function createInvoice(input: BillInput, clientKey: string): Promis
     ...rpcArgs(input),
     p_client_key: clientKey,
   });
-  if (error) return { error: error.message };
+  if (error) return { error: plainBillError(error.message) };
 
   const result = data as RpcStatus | null;
   if (result?.code === "insufficient_stock") return { shortages: result.shortages ?? [] };
@@ -121,7 +124,7 @@ export async function updateInvoice(
     p_delete_pin: deletePin,
     p_edit_key: editKey ?? null,
   });
-  if (error) return { error: error.message };
+  if (error) return { error: plainBillError(error.message) };
 
   const result = data as RpcStatus | null;
   if (result?.code === "insufficient_stock") return { shortages: result.shortages ?? [] };
@@ -181,4 +184,43 @@ export async function recordInvoicePrint(invoiceId: string): Promise<number | nu
   const { data, error } = await supabase.rpc("record_invoice_print", { p_invoice_id: invoiceId });
   if (error) return null;
   return (data as { print_count?: number } | null)?.print_count ?? null;
+}
+
+export interface TillItemInput {
+  name: string;
+  category_id: string | null;
+  base_unit: string;
+  batch_tracked: boolean;
+  /** Optional selling price per base unit. */
+  sale_price: number | null;
+}
+
+// "+ Add item" on the till. Owner only: checked here, and the database refuses a
+// Store Keeper's insert as well (items_insert policy). No purchase cost and no
+// stock are created; the price goes through the one price function (history row).
+export async function addTillItem(input: TillItemInput) {
+  const profile = await getCurrentProfile();
+  if (!profile || profile.role !== "owner") return { error: "Only the Owner can add items." };
+  const result = await createItem(
+    {
+      name: input.name,
+      category_id: input.category_id,
+      base_unit: input.base_unit,
+      reorder_level: 0,
+      batch_tracked: input.batch_tracked,
+      sale_price: input.sale_price,
+      units: [],
+    },
+    "item form"
+  );
+  if ("error" in result && result.error) return { error: result.error };
+  revalidatePath("/items/prices");
+  return result;
+}
+
+// A category added from the till's "+ Add item" popup. Owner only (RLS agrees).
+export async function addTillCategory(name: string) {
+  const profile = await getCurrentProfile();
+  if (!profile || profile.role !== "owner") return { error: "Only the Owner can add categories." };
+  return createCategory(name);
 }

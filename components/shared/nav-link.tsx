@@ -16,15 +16,18 @@ export function NavLink({
   href,
   className,
   onClick,
+  current,
   children,
 }: {
   href: string;
   className?: string;
   onClick?: () => void;
+  /** The tab for the page being shown (marked for screen readers and scrolling). */
+  current?: boolean;
   children: React.ReactNode;
 }) {
   return (
-    <Link href={href} className={className} onClick={onClick}>
+    <Link href={href} className={className} onClick={onClick} aria-current={current ? "page" : undefined}>
       {children}
       <PendingDot />
     </Link>

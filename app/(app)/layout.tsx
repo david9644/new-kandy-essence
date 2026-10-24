@@ -1,10 +1,12 @@
 import { requireProfile } from "@/lib/auth/session";
 import { AppFooter } from "@/components/shared/app-footer";
 import { LogoutButton } from "@/components/shared/logout-button";
-import { MoreNavMenu } from "@/components/shared/more-nav-menu";
-import { PrimaryNav, type NavAccent } from "@/components/shared/primary-nav";
+import { MainNav, type NavAccent } from "@/components/shared/main-nav";
 import { HeaderHeightVar } from "@/components/shared/header-height-var";
 
+// Main tabs, in the order they are used at the counter. Items and Price list
+// moved here from "More"; owner-only tabs are filtered out for a Store Keeper
+// (and every owner-only page still checks the role itself).
 const PRIMARY_NAV_ITEMS: Array<{
   href: string;
   label: string;
@@ -13,8 +15,10 @@ const PRIMARY_NAV_ITEMS: Array<{
 }> = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/billing", label: "Billing" },
-  { href: "/purchases", label: "Purchases", accent: "purchases" },
   { href: "/stock/out", label: "Stock-Out", accent: "stock" },
+  { href: "/purchases", label: "Purchases", accent: "purchases" },
+  { href: "/items", label: "Items" },
+  { href: "/items/prices", label: "Price list", ownerOnly: true },
   { href: "/stock", label: "Stock", accent: "stock" },
   { href: "/suppliers", label: "Suppliers" },
   { href: "/customers", label: "Customers", ownerOnly: true },
@@ -23,14 +27,10 @@ const PRIMARY_NAV_ITEMS: Array<{
   { href: "/reports", label: "Reports" },
 ];
 
-// Everything that isn't a primary tab lives behind the "More" button --
-// Opening Stock included, since Add Item now covers starting stock for a
-// new item and this is only needed occasionally (adding stock to an item
-// that already exists). Payments lives on each supplier's own ledger page
-// now, not as a separate global screen.
+// Everything that isn't a main tab lives behind the "More" button -- Opening
+// Stock included, since Add Item covers starting stock for a new item and this is
+// only needed occasionally. Payments lives on each supplier's own ledger page.
 const MORE_NAV_ITEMS: Array<{ href: string; label: string; ownerOnly?: boolean }> = [
-  { href: "/items", label: "Items" },
-  { href: "/items/prices", label: "Price list", ownerOnly: true },
   { href: "/stock/opening", label: "Opening Stock", ownerOnly: true },
   { href: "/stock/adjustments", label: "Adjustments", ownerOnly: true },
   { href: "/users", label: "Users", ownerOnly: true },
@@ -59,10 +59,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </div>
           <LogoutButton />
         </div>
-        <nav className="flex flex-wrap gap-2 px-4 pb-3">
-          <PrimaryNav items={visiblePrimaryItems} />
-          <MoreNavMenu items={visibleMoreItems} />
-        </nav>
+        <MainNav items={visiblePrimaryItems} moreItems={visibleMoreItems} />
       </header>
 
       <main className="p-4">{children}</main>

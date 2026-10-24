@@ -29,6 +29,7 @@ import {
 } from "@/lib/till/pay";
 import type { Shelf, ShelfItem, ShelfUnit } from "@/lib/till/shelf";
 import { formatQuantity } from "@/lib/units";
+import { AddItemDialog } from "./add-item-dialog";
 import { BillPanel, type Phase, type SavedInfo } from "./bill-panel";
 import { LineSheet } from "./line-sheet";
 import { QuickAddCustomer } from "./quick-add-customer";
@@ -171,6 +172,10 @@ export function TillScreen({
   const [customer, setCustomer] = useState<CustomerOption | null>(initial?.customer ?? null);
   const [customerList, setCustomerList] = useState<CustomerOption[]>(customers);
   const [quickAddQuery, setQuickAddQuery] = useState<string | null>(null);
+  // "+ Add item" (Owner only): the typed name to start from, or null when closed
+  const [addItemName, setAddItemName] = useState<string | null>(null);
+  // tells the shelf to show the item that was just added
+  const [reveal, setReveal] = useState<{ name: string; n: number } | null>(null);
   const [notes, setNotes] = useState(initial?.notes ?? "");
   const [date, setDate] = useState(initial?.date ?? today);
 
@@ -638,7 +643,14 @@ export function TillScreen({
               entries. You&rsquo;ll be asked for the Delete PIN.
             </p>
           )}
-          <ShelfPanel categories={shelf.categories} items={items} onPick={onPick} locked={locked} />
+          <ShelfPanel
+            categories={shelf.categories}
+            items={items}
+            onPick={onPick}
+            locked={locked}
+            onAddItem={isOwner ? setAddItemName : undefined}
+            reveal={reveal}
+          />
         </section>
 
         <aside
@@ -738,6 +750,32 @@ export function TillScreen({
             setCustomer(c);
             setChanged(true);
             setQuickAddQuery(null);
+          }}
+        />
+      )}
+
+      {isOwner && addItemName !== null && (
+        <AddItemDialog
+          initialName={addItemName}
+          categories={shelf.categories}
+          onClose={() => setAddItemName(null)}
+          onCategoryCreated={(c) =>
+            setShelf((prev) =>
+              prev && !prev.categories.some((x) => x.id === c.id)
+                ? { ...prev, categories: [...prev.categories, c] }
+                : prev
+            )
+          }
+          onCreated={(item) => {
+            // straight onto the held shelf (no reload); the bill is untouched
+            setShelf((prev) =>
+              prev && !prev.items.some((x) => x.id === item.id)
+                ? { ...prev, items: [...prev.items, item] }
+                : prev
+            );
+            setReveal((r) => ({ name: item.name, n: (r?.n ?? 0) + 1 }));
+            setAddItemName(null);
+            setTab("items");
           }}
         />
       )}

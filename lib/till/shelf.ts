@@ -22,6 +22,9 @@ export interface ShelfItem {
    * returns the shelf most-sold first). */
   sold_90d: number;
   units: ShelfUnit[];
+  /** Set only on an item added from the till in this session (it has no stock
+   * yet): its tile says "No stock" instead of looking sold out. */
+  fresh?: boolean;
 }
 
 export interface ShelfCategory {

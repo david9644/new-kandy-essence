@@ -60,8 +60,14 @@ const ItemTile = memo(function ItemTile({
 }) {
   const units = item.units.length ? item.units : [fallbackUnit(item)];
   const style = tileStyle(categoryHue(item.category_id));
-  const out = item.stock <= 0;
-  const stockText = out ? "Out of stock" : `${formatQuantity(item.stock)} ${item.base_unit}`;
+  // an item just added from the till has no stock yet: a plain hint, not "sold out"
+  const noStockYet = item.fresh === true && item.stock <= 0;
+  const out = item.stock <= 0 && !noStockYet;
+  const stockText = noStockYet
+    ? "No stock"
+    : out
+      ? "Out of stock"
+      : `${formatQuantity(item.stock)} ${item.base_unit}`;
 
   if (units.length === 1) {
     return (
@@ -119,11 +125,18 @@ export const ShelfPanel = memo(function ShelfPanel({
   items,
   onPick,
   locked,
+  onAddItem,
+  reveal,
 }: {
   categories: ShelfCategory[];
   items: ShelfItem[];
   onPick: (item: ShelfItem, unit: ShelfUnit) => void;
   locked: boolean;
+  /** Owner only: opens the "Add item" popup with this name filled in. Absent
+   * for a Store Keeper, who sees no such button. */
+  onAddItem?: (name: string) => void;
+  /** Bumped when an item was just added: shows it as a search result. */
+  reveal?: { name: string; n: number } | null;
 }) {
   const [category, setCategory] = useState<string>(ALL_CATEGORY);
   const [query, setQuery] = useState("");
@@ -138,6 +151,21 @@ export const ShelfPanel = memo(function ShelfPanel({
     const t = window.setTimeout(() => setDebounced(query), 120);
     return () => window.clearTimeout(t);
   }, [query]);
+
+  // a freshly added item: show it (search for its name) so it is on screen at once.
+  // Done while rendering (React's "adjust state when a prop changes" pattern).
+  const revealN = reveal?.n ?? 0;
+  const [seenReveal, setSeenReveal] = useState(0);
+  if (revealN !== seenReveal) {
+    setSeenReveal(revealN);
+    if (reveal) {
+      setQuery(reveal.name);
+      setDebounced(reveal.name);
+      setSubmitted(reveal.name);
+      setSuggestOpen(false);
+      setShown(TILE_PAGE_SIZE);
+    }
+  }
 
   // names/codes lower-cased once per shelf, not once per keystroke
   const index = useMemo(() => indexItems(items), [items]);
@@ -189,7 +217,7 @@ export const ShelfPanel = memo(function ShelfPanel({
   return (
     <div className={`flex min-h-0 flex-1 flex-col gap-3 ${locked ? "pointer-events-none opacity-60" : ""}`}>
       <div className="relative z-20 rounded-2xl border border-border bg-surface p-3">
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <KeyboardTextInput
             value={query}
             onChange={(v) => {
@@ -204,7 +232,7 @@ export const ShelfPanel = memo(function ShelfPanel({
             }}
             placeholder="Search name or code"
             aria-label="Search items"
-            className="h-12 min-w-0 flex-1 rounded-xl border border-border bg-surface px-4 text-base text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="h-12 min-w-[9rem] flex-1 rounded-xl border border-border bg-surface px-4 text-base text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
           <button
             type="button"
@@ -213,7 +241,36 @@ export const ShelfPanel = memo(function ShelfPanel({
           >
             Find
           </button>
+          {onAddItem && (
+            <button
+              type="button"
+              onClick={() => onAddItem("")}
+              className="h-12 w-full shrink-0 whitespace-nowrap rounded-xl border border-[#111827] bg-surface px-4 text-base font-semibold text-[#111827] active:bg-background sm:w-auto"
+            >
+              + Add item
+            </button>
+          )}
         </div>
+
+        {suggestOpen && onAddItem && suggestions.length === 0 && debounced.trim().length >= 2 && debounced === query && (
+          <>
+            <div className="fixed inset-0 z-10" onClick={() => setSuggestOpen(false)} />
+            <div className="absolute inset-x-3 top-[calc(100%-4px)] z-20 rounded-xl border border-border bg-surface p-2 shadow-lg">
+              <p className="px-2 py-1 text-xs text-muted">No item matches.</p>
+              <button
+                type="button"
+                onPointerDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  setSuggestOpen(false);
+                  onAddItem(query.trim());
+                }}
+                className="flex min-h-[48px] w-full items-center rounded-lg bg-[#111827] px-4 text-left text-base font-semibold text-white active:opacity-80"
+              >
+                <span className="truncate">Add &lsquo;{query.trim()}&rsquo;</span>
+              </button>
+            </div>
+          </>
+        )}
 
         {suggestOpen && suggestions.length > 0 && (
           <>
@@ -281,9 +338,18 @@ export const ShelfPanel = memo(function ShelfPanel({
           </p>
         )}
         {matching.length === 0 ? (
-          <p className="rounded-2xl border border-dashed border-border px-4 py-10 text-center text-sm text-muted">
-            {submitted !== null ? "No items match that search." : "No items in this category."}
-          </p>
+          <div className="rounded-2xl border border-dashed border-border px-4 py-10 text-center text-sm text-muted">
+            <p>{submitted !== null ? "No items match that search." : "No items in this category."}</p>
+            {onAddItem && submitted !== null && (
+              <button
+                type="button"
+                onClick={() => onAddItem(submitted)}
+                className="mt-4 inline-flex min-h-[48px] max-w-full items-center rounded-xl bg-[#111827] px-5 text-base font-semibold text-white active:opacity-80"
+              >
+                <span className="truncate">Add &lsquo;{submitted}&rsquo;</span>
+              </button>
+            )}
+          </div>
         ) : (
           <div
             className="grid gap-3"
