@@ -1,3 +1,4 @@
+import { lineAmounts } from "@/lib/line-price";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireProfile } from "@/lib/auth/session";
@@ -31,7 +32,7 @@ export default async function InvoiceDetailPage({
       supabase
         .from("invoice_items")
         .select(
-          "id, line_no, unit_name, quantity, unit_price, line_discount, line_total, items(name, code)"
+          "id, line_no, unit_name, quantity, unit_price, line_discount, line_total, list_unit_price, items(name, code)"
         )
         .eq("invoice_id", invoiceId)
         .order("line_no"),
@@ -133,6 +134,12 @@ export default async function InvoiceDetailPage({
           <tbody>
             {(lines ?? []).map((l) => {
               const item = l.items as { name: string; code: string } | null;
+              const amounts = lineAmounts({
+                quantity: l.quantity,
+                unitPrice: l.unit_price,
+                listUnitPrice: l.list_unit_price,
+                lineTotal: l.line_total,
+              });
               return (
                 <tr key={l.id} className="border-t border-border">
                   <td className="px-4 py-3 text-muted">{l.line_no}</td>
@@ -147,6 +154,14 @@ export default async function InvoiceDetailPage({
                     {l.line_discount ? formatCurrency(l.line_discount) : "-"}
                   </td>
                   <td className="px-4 py-3 text-right tabular-nums font-medium text-foreground">
+                    {amounts.struck && (
+                      <span
+                        className="block text-xs font-normal text-muted line-through"
+                        aria-label={`normal price ${formatCurrency(amounts.normalAmount)}`}
+                      >
+                        {formatCurrency(amounts.normalAmount)}
+                      </span>
+                    )}
                     {formatCurrency(l.line_total)}
                   </td>
                 </tr>

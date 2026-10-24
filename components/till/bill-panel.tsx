@@ -5,7 +5,8 @@ import { memo } from "react";
 import { KeyboardNumberInput } from "@/components/keyboard/keyboard-number-input";
 import { TapButton } from "./tap-button";
 import { formatRs } from "@/lib/till/format";
-import { fromCents } from "@/lib/billing";
+import { fromCents, num } from "@/lib/billing";
+import { lineAmounts } from "@/lib/line-price";
 import { lineIsFree, lineMissingPrice, type BillCalc, type DraftLine } from "@/lib/till/bill";
 import { UNCONFIRMED_MESSAGE } from "@/lib/till/net";
 import type { StockShortage } from "@/app/(app)/billing/actions";
@@ -29,6 +30,7 @@ const LineRowView = memo(function LineRowView({
   name,
   unitLabel,
   totalC,
+  normalAmount,
   warn,
   locked,
   onStep,
@@ -38,6 +40,8 @@ const LineRowView = memo(function LineRowView({
   name: string;
   unitLabel: string;
   totalC: number;
+  /** The crossed-out normal amount (rupees) when this line was discounted, else null. */
+  normalAmount: number | null;
   warn: boolean;
   locked: boolean;
   onStep: (key: string, delta: number) => void;
@@ -110,6 +114,14 @@ const LineRowView = memo(function LineRowView({
       </div>
 
       <span className="min-w-[4.5rem] justify-self-end text-right text-[15px] font-semibold tabular-nums text-foreground">
+        {normalAmount !== null && (
+          <span
+            className="block text-xs font-normal text-muted line-through"
+            aria-label={`normal price ${formatRs(normalAmount)}`}
+          >
+            {formatRs(normalAmount)}
+          </span>
+        )}
         {missing ? "—" : formatRs(fromCents(totalC))}
       </span>
     </li>
@@ -146,6 +158,19 @@ export interface BillPanelProps {
   onNewBill: () => void;
   cancelEditHref?: string;
   backToBillHref?: string;
+}
+
+// The crossed-out normal amount of a line (null = nothing crossed out). Same rule
+// as the saved bill page and the printed bill (lib/line-price.ts).
+function normalOf(line: DraftLine, totalC: number): number | null {
+  if (lineMissingPrice(line)) return null;
+  const a = lineAmounts({
+    quantity: num(line.quantity),
+    unitPrice: num(line.unitPrice),
+    listUnitPrice: line.listPrice,
+    lineTotal: fromCents(totalC),
+  });
+  return a.struck ? a.normalAmount : null;
 }
 
 export function BillPanel(p: BillPanelProps) {
@@ -239,6 +264,7 @@ export function BillPanel(p: BillPanelProps) {
                 name={p.nameOf(line)}
                 unitLabel={p.unitLabelOf(line)}
                 totalC={p.calc.lineTotalsC[i] ?? 0}
+                normalAmount={normalOf(line, p.calc.lineTotalsC[i] ?? 0)}
                 warn={p.lowStock.has(line.itemId)}
                 locked={locked}
                 onStep={p.onStep}

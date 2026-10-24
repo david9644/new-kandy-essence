@@ -51,6 +51,7 @@ export function InvoicePrintView({
   return (
     <PrintFrame
       pages={layout.pages}
+      styles={layout.styles}
       pageHeightsIn={layout.pageHeightsIn}
       settings={settings}
       title={invoice.invoiceNo}

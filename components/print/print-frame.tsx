@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef } from "react";
+import { Fragment, useEffect, useRef } from "react";
 import { fontSizePt, type PrintSettings } from "@/lib/print/settings";
+import type { StyleRun } from "@/lib/print/invoice-layout";
 
 // Renders pre-laid-out pages (arrays of fixed-width strings, see
 // lib/print/invoice-layout.ts) on screen and on paper. It only knows how to
@@ -19,12 +20,40 @@ import { fontSizePt, type PrintSettings } from "@/lib/print/settings";
 //     ONE piece as tall as a whole number of sheets (see layoutBill);
 //   * @page sets the paper size with zero margins -- the margins live inside
 //     the page div, so the printer driver's own margins stay at None.
+// One line of a piece as React nodes: plain text, with the struck column ranges
+// wrapped in a line-through span. Same characters in the same columns either way.
+function renderLine(text: string, runs: StyleRun[]) {
+  if (runs.length === 0) return text;
+  const parts: React.ReactNode[] = [];
+  let at = 0;
+  [...runs]
+    .sort((a, b) => a.start - b.start)
+    .forEach((r, i) => {
+      const start = Math.max(at, Math.min(r.start, text.length));
+      const end = Math.max(start, Math.min(r.end, text.length));
+      if (start > at) parts.push(text.slice(at, start));
+      if (end > start) {
+        parts.push(
+          <span key={i} className="nke-strike">
+            {text.slice(start, end)}
+          </span>
+        );
+      }
+      at = end;
+    });
+  if (at < text.length) parts.push(text.slice(at));
+  return parts;
+}
+
 export function PrintSheet({
   pages,
+  styles,
   pageHeightsIn,
   settings,
 }: {
   pages: string[][];
+  /** Struck-through runs per piece (omit for none). */
+  styles?: StyleRun[][];
   /** Printed height of each piece (a whole number of sheets). */
   pageHeightsIn: number[];
   settings: PrintSettings;
@@ -54,6 +83,7 @@ ${pageRules}
   background: #fff;
   color: #000;
 }
+.nke-page pre .nke-strike { text-decoration: line-through; text-decoration-thickness: 1px; }
 .nke-page pre {
   margin: 0;
   padding: 0;
@@ -92,7 +122,14 @@ ${pageRules}
             data-h={heightOf(i)}
             style={{ height: `${heightOf(i) - 0.01}in` }}
           >
-            <pre style={{ height: `${lines.length * lineIn}in` }}>{lines.join("\n")}</pre>
+            <pre style={{ height: `${lines.length * lineIn}in` }}>
+              {lines.map((text, li) => (
+                <Fragment key={li}>
+                  {renderLine(text, (styles?.[i] ?? []).filter((r) => r.line === li))}
+                  {li < lines.length - 1 ? "\n" : null}
+                </Fragment>
+              ))}
+            </pre>
           </div>
         ))}
       </div>
@@ -105,6 +142,7 @@ ${pageRules}
 // page which).
 export function PrintFrame({
   pages,
+  styles,
   pageHeightsIn,
   settings,
   title,
@@ -116,6 +154,7 @@ export function PrintFrame({
   status,
 }: {
   pages: string[][];
+  styles?: StyleRun[][];
   pageHeightsIn: number[];
   settings: PrintSettings;
   title: string;
@@ -181,7 +220,7 @@ export function PrintFrame({
         </p>
         {status && <p className="mx-auto mt-1 max-w-3xl text-xs text-foreground">{status}</p>}
       </div>
-      <PrintSheet pages={pages} pageHeightsIn={pageHeightsIn} settings={settings} />
+      <PrintSheet pages={pages} styles={styles} pageHeightsIn={pageHeightsIn} settings={settings} />
     </div>
   );
 }

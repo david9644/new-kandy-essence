@@ -11,12 +11,14 @@
 // grids); no page is ever empty.
 
 import { formatQuantity } from "../units";
+import { lineAmounts } from "../line-price";
 import {
   deriveGrid,
   printedHeight,
   rowsForHeight,
   type PrintGrid,
   type PrintSettings,
+  type StrikeMode,
 } from "./settings";
 
 export type PrintLabel = "COPY" | "REVISED" | null;
@@ -35,6 +37,10 @@ export interface PrintInvoiceLine {
   unitPrice: number;
   lineDiscount: number;
   lineTotal: number;
+  /** The item's list price for this unit when the line was billed (a server
+   * snapshot); null/undefined = none recorded. Used only to show the crossed-out
+   * normal amount (lib/line-price.ts). */
+  listUnitPrice?: number | null;
 }
 
 export interface PrintInvoicePayment {
@@ -68,8 +74,24 @@ export interface PrintInvoice {
   label: PrintLabel;
 }
 
+/** Columns [start, end) of line `line` (0-based, within its page) drawn crossed out. */
+export interface StyleRun {
+  line: number;
+  start: number;
+  end: number;
+}
+
+/** Internal: a line of text with the column ranges that are struck. */
+interface Ln {
+  t: string;
+  strike?: Array<[number, number]>;
+}
+const ln = (t: string): Ln => ({ t });
+
 export interface LayoutResult {
   pages: string[][];
+  /** Struck-through runs per page (same page order as `pages`). */
+  styles: StyleRun[][];
   /** Lines that had to be clipped to the width (should always be 0). */
   clippedLines: number;
   /** Lines dropped because a page's header + body exceeded the page height
@@ -195,7 +217,57 @@ function columnHeader(c: Columns, cols: number): string[] {
   ];
 }
 
-function itemBlock(l: PrintInvoiceLine, c: Columns, cols: number): string[] {
+// A discounted line (see lib/line-price.ts) in the "strike" and "text" modes:
+//   Darck chocolate (1/800)                 <- the name, full width
+//     2 box x 1,250.50      2,501.00 2,250.00   <- qty x price, struck normal amount, final amount
+// In "text" mode the normal amount is written "(was 2,501.00)" instead of struck.
+function discountedBlock(
+  l: PrintInvoiceLine,
+  normal: number,
+  cols: number,
+  mode: "strike" | "text"
+): Ln[] {
+  const out: Ln[] = wrap(l.itemName, cols).map(ln);
+  const left = `  ${qtyText(l)} x ${fmtMoney(l.unitPrice)}`;
+  const normalTxt = fmtMoney(normal);
+  const shown = mode === "strike" ? normalTxt : `(was ${normalTxt})`;
+  const final = fmtMoney(l.lineTotal);
+  const right = `${shown} ${final}`;
+
+  if (right.length <= cols - 2) {
+    const rows = row(left, right, cols);
+    const last = rows.length - 1;
+    rows.forEach((t, i) => {
+      if (i === last && mode === "strike") {
+        const start = cols - right.length;
+        out.push({ t, strike: [[start, start + normalTxt.length]] });
+      } else out.push(ln(t));
+    });
+  } else {
+    // absurdly large amounts on a narrow grid: the left part, then the normal and
+    // final amounts each on their own right-aligned row
+    for (const t of row(left, "", cols)) out.push(ln(t));
+    out.push(
+      mode === "strike"
+        ? { t: padL(shown, cols), strike: [[cols - shown.length, cols]] }
+        : ln(padL(shown, cols))
+    );
+    out.push(ln(padL(final, cols)));
+  }
+  return out;
+}
+
+function itemBlock(l: PrintInvoiceLine, c: Columns, cols: number, mode: StrikeMode): Ln[] {
+  if (mode !== "off") {
+    const a = lineAmounts({
+      quantity: l.quantity,
+      unitPrice: l.unitPrice,
+      listUnitPrice: l.listUnitPrice,
+      lineTotal: l.lineTotal,
+    });
+    if (a.struck) return discountedBlock(l, a.normalAmount, cols, mode);
+  }
+
   const out: string[] = [];
   if (c.stacked) {
     out.push(...wrap(l.itemName, cols));
@@ -213,7 +285,7 @@ function itemBlock(l: PrintInvoiceLine, c: Columns, cols: number): string[] {
   if (Math.abs(l.lineDiscount) > 0.004) {
     out.push(...row("  less discount", `-${fmtMoney(l.lineDiscount)}`, cols));
   }
-  return out;
+  return out.map(ln);
 }
 
 // ── headers ─────────────────────────────────────────────────────────────
@@ -322,19 +394,19 @@ function fitLine(s: string, cols: number, counters: { clipped: number }): string
   return padR(s, cols);
 }
 
-function build(inv: PrintInvoice, grid: PrintGrid, count: number): LayoutResult {
+function build(inv: PrintInvoice, grid: PrintGrid, count: number, mode: StrikeMode): LayoutResult {
   const { cols, rows } = grid;
   const columns = columnsFor(inv, cols);
   const header1Height = fullHeader(inv, columns, cols, 1, count).length;
   const headerNHeight = compactHeader(inv, columns, cols, 2, count).length;
 
-  const body: string[][] = [[]];
+  const body: Ln[][] = [[]];
   const capacity = (pageIndex: number) => rows - (pageIndex === 0 ? header1Height : headerNHeight);
 
   // Places a block on the current page, or on a fresh one if it does not fit.
   // Blocks (an item with its wrapped name lines, the whole totals block) stay
   // together; they are only cut when taller than an entire empty page.
-  function place(block: string[]) {
+  function place(block: Ln[]) {
     let rest = block;
     for (;;) {
       const cur = body[body.length - 1];
@@ -355,40 +427,54 @@ function build(inv: PrintInvoice, grid: PrintGrid, count: number): LayoutResult 
     }
   }
 
-  for (const line of inv.lines) place(itemBlock(line, columns, cols));
-  place(totalsBlock(inv, cols));
+  for (const line of inv.lines) place(itemBlock(line, columns, cols, mode));
+  place(totalsBlock(inv, cols).map(ln));
 
   if (body.length > 1 && body[body.length - 1].length === 0) body.pop();
 
   const counters = { clipped: 0 };
   let overflow = 0;
+  const styles: StyleRun[][] = [];
   const pages = body.map((bodyLines, i) => {
     const header =
       i === 0
         ? fullHeader(inv, columns, cols, 1, body.length)
         : compactHeader(inv, columns, cols, i + 1, body.length);
-    let lines = [...header, ...bodyLines];
+    let lines: Ln[] = [...header.map(ln), ...bodyLines];
     if (lines.length > rows) {
       overflow += lines.length - rows;
       lines = lines.slice(0, rows);
     }
-    const fitted = lines.map((l) => fitLine(l, cols, counters));
+    styles.push(runsOf(lines));
+    const fitted = lines.map((l) => fitLine(l.t, cols, counters));
     while (fitted.length < rows) fitted.push(" ".repeat(cols));
     return fitted;
   });
 
-  return { pages, clippedLines: counters.clipped, overflowLines: overflow };
+  return { pages, styles, clippedLines: counters.clipped, overflowLines: overflow };
+}
+
+function runsOf(lines: Ln[]): StyleRun[] {
+  const out: StyleRun[] = [];
+  lines.forEach((l, i) => {
+    for (const [start, end] of l.strike ?? []) out.push({ line: i, start, end });
+  });
+  return out;
 }
 
 /** Lay an invoice out on the given character grid. */
-export function layoutInvoiceDetailed(inv: PrintInvoice, grid: PrintGrid): LayoutResult {
+export function layoutInvoiceDetailed(
+  inv: PrintInvoice,
+  grid: PrintGrid,
+  mode: StrikeMode = "off"
+): LayoutResult {
   // "Page x of y" is padded to the width of the final count, which itself
   // depends on the layout: iterate until the count is stable (1-2 rounds).
   let count = 1;
-  let result = build(inv, grid, count);
+  let result = build(inv, grid, count, mode);
   for (let i = 0; i < 6 && result.pages.length !== count; i++) {
     count = result.pages.length;
-    result = build(inv, grid, count);
+    result = build(inv, grid, count, mode);
   }
   return result;
 }
@@ -404,6 +490,8 @@ export type BillMode = "continuous" | "pieces" | "sheets";
 export interface BillLayout {
   /** Each piece is exactly `heights[i]`'s worth of lines, every line `cols` wide. */
   pages: string[][];
+  /** Struck-through runs per piece (empty unless strikeMode is "strike"). */
+  styles: StyleRun[][];
   /** Printed height of each piece, a whole number of sheets. */
   pageHeightsIn: number[];
   mode: BillMode;
@@ -412,8 +500,8 @@ export interface BillLayout {
   overflowLines: number;
 }
 
-function fitTo(lines: string[], cols: number, rows: number, counters: { clipped: number }): string[] {
-  const out = lines.slice(0, rows).map((l) => fitLine(l, cols, counters));
+function fitTo(lines: Ln[], cols: number, rows: number, counters: { clipped: number }): string[] {
+  const out = lines.slice(0, rows).map((l) => fitLine(l.t, cols, counters));
   while (out.length < rows) out.push(" ".repeat(cols));
   return out;
 }
@@ -432,10 +520,12 @@ export function layoutBill(inv: PrintInvoice, settings: PrintSettings): BillLayo
   const grid = deriveGrid(settings);
   const { cols } = grid;
 
+  const strike = settings.strikeMode;
   if (!settings.continuous) {
-    const r = layoutInvoiceDetailed(inv, grid);
+    const r = layoutInvoiceDetailed(inv, grid, strike);
     return {
       pages: r.pages,
+      styles: r.styles,
       pageHeightsIn: r.pages.map(() => settings.pageHeightIn),
       mode: "sheets",
       cols,
@@ -445,9 +535,9 @@ export function layoutBill(inv: PrintInvoice, settings: PrintSettings): BillLayo
   }
 
   const columns = columnsFor(inv, cols);
-  const lines: string[] = [...fullHeader(inv, columns, cols, 1, 0)];
-  for (const l of inv.lines) lines.push(...itemBlock(l, columns, cols));
-  lines.push(...totalsBlock(inv, cols));
+  const lines: Ln[] = fullHeader(inv, columns, cols, 1, 0).map(ln);
+  for (const l of inv.lines) lines.push(...itemBlock(l, columns, cols, strike));
+  lines.push(...totalsBlock(inv, cols).map(ln));
 
   let { sheets, heightIn } = printedHeight(settings, lines.length);
   let rows = rowsForHeight(settings, heightIn);
@@ -461,6 +551,7 @@ export function layoutBill(inv: PrintInvoice, settings: PrintSettings): BillLayo
     const counters = { clipped: 0 };
     return {
       pages: [fitTo(lines, cols, rows, counters)],
+      styles: [runsOf(lines.slice(0, rows))],
       pageHeightsIn: [heightIn],
       mode: "continuous",
       cols,
@@ -472,12 +563,14 @@ export function layoutBill(inv: PrintInvoice, settings: PrintSettings): BillLayo
   // Longer than the maximum: pieces of maxSheets sheets each.
   const maxHeight = Math.round(settings.maxSheets * settings.pageHeightIn * 1000) / 1000;
   const maxRows = rowsForHeight(settings, maxHeight);
-  const r = layoutInvoiceDetailed(inv, { cols, rows: maxRows });
+  const r = layoutInvoiceDetailed(inv, { cols, rows: maxRows }, strike);
   const counters = { clipped: r.clippedLines };
   const heights: number[] = [];
+  const styles: StyleRun[][] = [];
   const pages = r.pages.map((page, i) => {
     if (i < r.pages.length - 1) {
       heights.push(maxHeight);
+      styles.push(r.styles[i]);
       return page;
     }
     let used = page.length;
@@ -489,16 +582,25 @@ export function layoutBill(inv: PrintInvoice, settings: PrintSettings): BillLayo
       lastRows = rowsForHeight(settings, last.heightIn);
     }
     heights.push(last.heightIn);
-    return fitTo(page.slice(0, used), cols, lastRows, counters);
+    styles.push(r.styles[i].filter((x) => x.line < lastRows));
+    return fitTo(page.slice(0, used).map(ln), cols, lastRows, counters);
   });
   return {
     pages,
+    styles,
     pageHeightsIn: heights,
     mode: "pieces",
     cols,
     clippedLines: counters.clipped,
     overflowLines: r.overflowLines,
   };
+}
+
+/** The same bill with every crossed-out amount written as "(was 360.00)" instead
+ * (no style runs at all): plain text for raw printing, e.g. a later QZ Tray step
+ * that sends the lines straight to the printer. */
+export function layoutBillPlain(inv: PrintInvoice, settings: PrintSettings): BillLayout {
+  return layoutBill(inv, { ...settings, strikeMode: settings.strikeMode === "off" ? "off" : "text" });
 }
 
 // ── test data + calibration page (never touch the database) ─────────────
@@ -517,8 +619,27 @@ export function sampleInvoice(lineCount: number): PrintInvoice {
   for (let i = 0; i < lineCount; i++) {
     const quantity = [1, 2, 3, 12.5, 100, 7][i % 6];
     const unitPrice = [100, 1250.5, 45, 8750, 12, 999.99][i % 6];
-    const lineDiscount = i % 9 === 4 ? 25 : 0;
+    // line discount on some lines, none on the others
+    const lineDiscount = i % 9 === 4 ? 25 : i % 12 === 6 ? 10 : 0;
     const gross = Math.round(quantity * unitPrice * 100) / 100;
+    // One of each kind of line for the test prints:
+    //  0  no list price at all (an item with no selling price)  [+ discount on i%12==6]
+    //  1  normal, 4 normal + the line discount above
+    //  2  price typed BELOW the list price  -> crossed-out normal amount
+    //  3  price typed ABOVE the list price  -> nothing crossed out
+    //  5  price typed below the list price (smaller gap)
+    const kind = i % 6;
+    const round2 = (n: number) => Math.round(n * 100) / 100;
+    const listUnitPrice =
+      kind === 0
+        ? null
+        : kind === 2
+          ? round2(unitPrice * 1.25)
+          : kind === 3
+            ? round2(unitPrice * 0.8)
+            : kind === 5
+              ? round2(unitPrice * 1.2)
+              : unitPrice;
     lines.push({
       itemName: `${names[i % names.length]}${lineCount > 6 ? ` #${i + 1}` : ""}`,
       quantity,
@@ -526,6 +647,7 @@ export function sampleInvoice(lineCount: number): PrintInvoice {
       unitPrice,
       lineDiscount,
       lineTotal: Math.round((gross - lineDiscount) * 100) / 100,
+      listUnitPrice,
     });
   }
   const subtotal = Math.round(lines.reduce((s, l) => s + l.quantity * l.unitPrice, 0) * 100) / 100;

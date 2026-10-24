@@ -3,6 +3,11 @@
 // margins, characters-per-inch and lines-per-inch all come from here (stored
 // in app_settings and tunable from Settings -> Printing with a test print).
 
+/** How a discounted line's NORMAL amount is printed:
+ *  strike = crossed out (the default), text = written "(was 360.00)", off = not shown. */
+export type StrikeMode = "strike" | "text" | "off";
+export const STRIKE_MODES: readonly StrikeMode[] = ["strike", "text", "off"];
+
 export interface PrintSettings {
   pageWidthIn: number;
   pageHeightIn: number;
@@ -20,6 +25,8 @@ export interface PrintSettings {
   /** Longest single piece, in sheets (one sheet = pageHeightIn). Longer bills
    * are cut into pieces of this length, each with a header and "Page x of y". */
   maxSheets: number;
+  /** Crossed-out normal price on discounted lines (see StrikeMode). */
+  strikeMode: StrikeMode;
 }
 
 export interface PrintGrid {
@@ -46,6 +53,7 @@ export const DEFAULT_PRINT_SETTINGS: PrintSettings = {
   footer: "Thank you. Come again.",
   continuous: true,
   maxSheets: 6,
+  strikeMode: "strike",
 };
 
 export const MIN_COLS = 30;
@@ -106,6 +114,9 @@ export function validatePrintSettings(s: PrintSettings): string | null {
   if (!Number.isInteger(s.maxSheets) || s.maxSheets < 1 || s.maxSheets > 20) {
     return "Maximum bill length must be a whole number of sheets between 1 and 20.";
   }
+  if (!STRIKE_MODES.includes(s.strikeMode)) {
+    return "Choose how the normal price of a discounted line is printed.";
+  }
   if (s.footer.length > 80) return "The footer line can be at most 80 characters.";
   if (/[\r\n]/.test(s.footer)) return "The footer must be a single line.";
 
@@ -138,6 +149,10 @@ export function applyOverrides(
     if (v === undefined || v === "") return fallback;
     return v === "1" || v === "true";
   };
+  const strikeParam = (raw: string | string[] | undefined, fallback: StrikeMode): StrikeMode => {
+    const v = Array.isArray(raw) ? raw[0] : raw;
+    return (STRIKE_MODES as readonly string[]).includes(v ?? "") ? (v as StrikeMode) : fallback;
+  };
   const footerRaw = params.footer;
   const footer = Array.isArray(footerRaw) ? footerRaw[0] : footerRaw;
   return {
@@ -152,6 +167,7 @@ export function applyOverrides(
     footer: footer !== undefined ? footer : base.footer,
     continuous: flag("cont", base.continuous),
     maxSheets: num("maxs", base.maxSheets),
+    strikeMode: strikeParam(params.sm, base.strikeMode),
   };
 }
 
@@ -168,6 +184,7 @@ export function settingsToQuery(s: PrintSettings): string {
     footer: s.footer,
     cont: s.continuous ? "1" : "0",
     maxs: String(s.maxSheets),
+    sm: s.strikeMode,
   });
   return p.toString();
 }

@@ -21,7 +21,7 @@ export default async function PrintInvoicePage({
     supabase.from("invoices").select("*").eq("id", invoiceId).maybeSingle(),
     supabase
       .from("invoice_items")
-      .select("line_no, unit_name, quantity, unit_price, line_discount, line_total, items(name)")
+      .select("line_no, unit_name, quantity, unit_price, line_discount, line_total, list_unit_price, items(name)")
       .eq("invoice_id", invoiceId)
       .order("line_no"),
     supabase
@@ -49,6 +49,7 @@ export default async function PrintInvoicePage({
       unitPrice: l.unit_price,
       lineDiscount: l.line_discount,
       lineTotal: l.line_total,
+      listUnitPrice: l.list_unit_price,
     })),
     subtotal: invoice.subtotal,
     lineDiscountTotal: invoice.line_discount_total,

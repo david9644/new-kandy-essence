@@ -26,7 +26,7 @@ export default async function EditBillPage({
         .maybeSingle(),
       supabase
         .from("invoice_items")
-        .select("item_id, unit_name, quantity, base_quantity, unit_price, line_discount, line_no")
+        .select("item_id, unit_name, quantity, base_quantity, unit_price, line_discount, list_unit_price, line_no")
         .eq("invoice_id", invoiceId)
         .order("line_no"),
       supabase
@@ -105,6 +105,7 @@ export default async function EditBillPage({
           quantity: l.quantity,
           unitPrice: l.unit_price,
           discount: l.line_discount,
+          listUnitPrice: l.list_unit_price,
         })),
         payments: payments ?? [],
       }}

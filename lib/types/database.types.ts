@@ -33,6 +33,7 @@ export type Database = {
           print_margin_top_in: number
           print_page_height_in: number
           print_page_width_in: number
+          print_strike_mode: string
         }
         Insert: {
           business_address?: string | null
@@ -52,6 +53,7 @@ export type Database = {
           print_margin_top_in?: number
           print_page_height_in?: number
           print_page_width_in?: number
+          print_strike_mode?: string
         }
         Update: {
           business_address?: string | null
@@ -71,6 +73,7 @@ export type Database = {
           print_margin_top_in?: number
           print_page_height_in?: number
           print_page_width_in?: number
+          print_strike_mode?: string
         }
         Relationships: []
       }
@@ -361,6 +364,7 @@ export type Database = {
           line_discount: number
           line_no: number
           line_total: number
+          list_unit_price: number | null
           quantity: number
           stock_out_id: string | null
           unit_name: string

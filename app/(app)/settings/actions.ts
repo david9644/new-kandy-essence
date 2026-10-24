@@ -173,6 +173,7 @@ export async function updatePrintSettings(input: PrintSettings) {
       print_footer: input.footer.trim() || "Thank you. Come again.",
       print_continuous: input.continuous,
       print_max_sheets: input.maxSheets,
+      print_strike_mode: input.strikeMode,
     })
     .eq("id", true)
     .select("id");

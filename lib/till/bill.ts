@@ -11,6 +11,9 @@ export interface DraftLine {
   /** Empty string = no price yet (blocks saving). "0" is a deliberate free line. */
   unitPrice: string;
   discount: string;
+  /** The item's list price for this unit (from the shelf, or the snapshot saved on
+   * the bill when editing); null = none. Display only: it never changes any amount. */
+  listPrice?: number | null;
 }
 
 export function lineMissingPrice(l: DraftLine): boolean {
@@ -48,6 +51,7 @@ export function addOrIncrement(
         quantity: "1",
         unitPrice: price === null ? "" : String(price),
         discount: "",
+        listPrice: price,
       },
     ],
     key: newKey,

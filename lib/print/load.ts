@@ -19,7 +19,7 @@ export async function loadPrintConfig(supabase: SupabaseClient<Database>): Promi
   const { data } = await supabase
     .from("app_settings")
     .select(
-      "business_name, business_address, business_phone1, business_phone2, print_page_width_in, print_page_height_in, print_margin_top_in, print_margin_bottom_in, print_margin_left_in, print_margin_right_in, print_cpi, print_lpi, print_footer, print_continuous, print_max_sheets"
+      "business_name, business_address, business_phone1, business_phone2, print_page_width_in, print_page_height_in, print_margin_top_in, print_margin_bottom_in, print_margin_left_in, print_margin_right_in, print_cpi, print_lpi, print_footer, print_continuous, print_max_sheets, print_strike_mode"
     )
     .eq("id", true)
     .maybeSingle();
@@ -37,6 +37,9 @@ export async function loadPrintConfig(supabase: SupabaseClient<Database>): Promi
         footer: data.print_footer,
         continuous: data.print_continuous,
         maxSheets: Number(data.print_max_sheets),
+        strikeMode: (["strike", "text", "off"].includes(data.print_strike_mode)
+          ? data.print_strike_mode
+          : "strike") as PrintSettings["strikeMode"],
       }
     : DEFAULT_PRINT_SETTINGS;
 

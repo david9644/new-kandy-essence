@@ -51,6 +51,7 @@ export default async function PrintTestPage({
   return (
     <PrintFrame
       pages={pages}
+      styles={bill?.styles}
       pageHeightsIn={pageHeightsIn}
       settings={settings}
       title={

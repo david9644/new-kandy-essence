@@ -50,6 +50,7 @@ function draftFromInitial(initial?: InitialBill): DraftLine[] {
     quantity: String(l.quantity),
     unitPrice: String(l.unitPrice),
     discount: l.discount ? String(l.discount) : "",
+    listPrice: l.listUnitPrice,
   }));
 }
 
@@ -269,7 +270,11 @@ export function TillScreen({
       const line = linesRef.current.find((l) => l.key === key);
       const unit = line ? itemsByIdRef.current.get(line.itemId)?.units.find((u) => u.unit_name === unitName) : undefined;
       // A price belongs to one unit: switching starts from that unit's shelf price.
-      patchLine(key, { unitName, unitPrice: unit?.price != null ? String(unit.price) : "" });
+      patchLine(key, {
+        unitName,
+        unitPrice: unit?.price != null ? String(unit.price) : "",
+        listPrice: unit?.price ?? null,
+      });
     },
     [patchLine]
   );

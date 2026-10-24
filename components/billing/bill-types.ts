@@ -19,6 +19,8 @@ export interface InitialBill {
     quantity: number;
     unitPrice: number;
     discount: number;
+    /** Normal-price snapshot saved with the line (null on old bills / unpriced items). */
+    listUnitPrice: number | null;
   }[];
   payments: {
     method: string;

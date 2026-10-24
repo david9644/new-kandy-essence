@@ -12,13 +12,14 @@ import {
   settingsToQuery,
   validatePrintSettings,
   type PrintSettings,
+  type StrikeMode,
 } from "@/lib/print/settings";
 
 const NUM =
   "w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-right text-sm tabular-nums text-foreground focus:border-primary focus:outline-none";
 
-type NumKey = Exclude<keyof PrintSettings, "footer" | "continuous">;
-type Draft = Record<NumKey, string> & { footer: string; continuous: boolean };
+type NumKey = Exclude<keyof PrintSettings, "footer" | "continuous" | "strikeMode">;
+type Draft = Record<NumKey, string> & { footer: string; continuous: boolean; strikeMode: StrikeMode };
 
 function toDraft(s: PrintSettings): Draft {
   return {
@@ -33,6 +34,7 @@ function toDraft(s: PrintSettings): Draft {
     footer: s.footer,
     continuous: s.continuous,
     maxSheets: String(s.maxSheets),
+    strikeMode: s.strikeMode,
   };
 }
 
@@ -50,6 +52,7 @@ function fromDraft(d: Draft): PrintSettings {
     footer: d.footer,
     continuous: d.continuous,
     maxSheets: n(d.maxSheets),
+    strikeMode: d.strikeMode,
   };
 }
 
@@ -152,6 +155,25 @@ export function PrintingSettingsForm({
             `One sheet = the page height (${draft.pageHeightIn} in). Longer bills are split.`
           )}
         </div>
+      </div>
+
+      <div className="rounded-lg border border-border p-3">
+        <label className="mb-1 block text-sm font-medium text-foreground">
+          Normal price on discounted lines
+        </label>
+        <select
+          value={draft.strikeMode}
+          onChange={(e) => set("strikeMode", e.target.value as StrikeMode)}
+          className="h-12 w-full rounded-lg border border-border bg-surface px-3 text-sm text-foreground focus:border-primary focus:outline-none"
+        >
+          <option value="strike">Show crossed out (360.00 with a line through it, then 300.00)</option>
+          <option value="text">Write it: (was 360.00) 300.00 &mdash; if the printer does not draw the line</option>
+          <option value="off">Do not show the normal price (just the final amount)</option>
+        </select>
+        <p className="mt-1 text-[11px] text-muted">
+          Applies only to lines that were given a discount or sold below the list price. The test
+          bill below contains one of each kind of line.
+        </p>
       </div>
 
       <div className="rounded-lg bg-background px-3 py-2 text-sm">
