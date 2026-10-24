@@ -1529,6 +1529,13 @@ export type Database = {
           running_balance: number
         }[]
       }
+      get_item_last_costs: {
+        Args: { p_ids: string[] }
+        Returns: {
+          item_id: string
+          last_purchase_cost: number
+        }[]
+      }
       get_own_profile: {
         Args: never
         Returns: {

@@ -6,12 +6,17 @@ import { BackButton } from "@/components/shared/back-button";
 import { formatCurrency, formatQuantity } from "@/lib/units";
 
 export default async function DailySummaryReportPage() {
-  await requireProfile();
+  const profile = await requireProfile();
+  // Purchase totals are purchase costs: the Owner's only. A Store Keeper's summary
+  // has no purchases box (the database would return no purchases to them anyway).
+  const isOwner = profile.role === "owner";
   const supabase = await createClient();
   const today = todayInBusinessTz();
 
   const [{ data: purchases }, { data: stockOut }, lowStock, nearExpiry] = await Promise.all([
-    supabase.from("purchases").select("id, total_amount, suppliers(name)").eq("date", today),
+    isOwner
+      ? supabase.from("purchases").select("id, total_amount, suppliers(name)").eq("date", today)
+      : Promise.resolve({ data: [] as { id: string; total_amount: number; suppliers: { name: string } | null }[] }),
     supabase
       .from("stock_out")
       .select("id, quantity, unit_name, items(name)")
@@ -28,11 +33,13 @@ export default async function DailySummaryReportPage() {
       <BackButton href="/reports" />
       <PrintLayout title="Daily Summary" subtitle={today}>
       <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <div className="rounded-lg bg-background p-3 print:border print:border-gray-300">
-          <p className="text-xs text-muted">Purchases Today</p>
-          <p className="text-xl font-semibold text-foreground">{(purchases ?? []).length}</p>
-          <p className="text-xs text-muted">{formatCurrency(purchaseTotal)}</p>
-        </div>
+        {isOwner && (
+          <div className="rounded-lg bg-background p-3 print:border print:border-gray-300">
+            <p className="text-xs text-muted">Purchases Today</p>
+            <p className="text-xl font-semibold text-foreground">{(purchases ?? []).length}</p>
+            <p className="text-xs text-muted">{formatCurrency(purchaseTotal)}</p>
+          </div>
+        )}
         <div className="rounded-lg bg-background p-3 print:border print:border-gray-300">
           <p className="text-xs text-muted">Stock-Out Entries Today</p>
           <p className="text-xl font-semibold text-foreground">{(stockOut ?? []).length}</p>
@@ -47,22 +54,26 @@ export default async function DailySummaryReportPage() {
         </div>
       </div>
 
-      <h2 className="mb-2 font-medium text-foreground">Today&rsquo;s Purchases</h2>
-      <table className="mb-6 w-full text-left text-sm">
-        <tbody>
-          {(purchases ?? []).map((p) => (
-            <tr key={p.id} className="border-b border-border print:border-gray-300">
-              <td className="py-2">{(p.suppliers as { name: string } | null)?.name}</td>
-              <td className="py-2 text-right tabular-nums">{formatCurrency(p.total_amount)}</td>
-            </tr>
-          ))}
-          {(purchases ?? []).length === 0 && (
-            <tr>
-              <td className="py-4 text-center text-muted">No purchases today.</td>
-            </tr>
-          )}
-        </tbody>
-      </table>
+      {isOwner && (
+        <>
+          <h2 className="mb-2 font-medium text-foreground">Today&rsquo;s Purchases</h2>
+          <table className="mb-6 w-full text-left text-sm">
+            <tbody>
+              {(purchases ?? []).map((p) => (
+                <tr key={p.id} className="border-b border-border print:border-gray-300">
+                  <td className="py-2">{(p.suppliers as { name: string } | null)?.name}</td>
+                  <td className="py-2 text-right tabular-nums">{formatCurrency(p.total_amount)}</td>
+                </tr>
+              ))}
+              {(purchases ?? []).length === 0 && (
+                <tr>
+                  <td className="py-4 text-center text-muted">No purchases today.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </>
+      )}
 
       <h2 className="mb-2 font-medium text-foreground">Today&rsquo;s Stock-Out</h2>
       <table className="w-full text-left text-sm">

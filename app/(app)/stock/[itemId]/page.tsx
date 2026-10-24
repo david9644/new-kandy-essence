@@ -18,20 +18,31 @@ export default async function StockBatchesPage({
   params: Promise<{ itemId: string }>;
 }) {
   const { itemId } = await params;
-  await requireProfile();
+  const profile = await requireProfile();
+  const showCost = profile.role === "owner";
   const supabase = await createClient();
 
-  const [{ data: item }, { data: batches }] = await Promise.all([
-    supabase.from("items").select("*").eq("id", itemId).maybeSingle(),
+  const [{ data: item }, { data: batches }, { data: costRows }] = await Promise.all([
+    supabase
+      .from("items")
+      .select("id, code, name, base_unit, batch_tracked")
+      .eq("id", itemId)
+      .maybeSingle(),
     supabase
       .from("stock_batches")
-      .select("id, batch_number, expiry_date, quantity_remaining, unit_cost, created_at")
+      .select("id, batch_number, expiry_date, quantity_remaining, created_at")
       .eq("item_id", itemId)
       .order("expiry_date", { ascending: true, nullsFirst: false })
       .order("created_at", { ascending: true }),
+    // Unit costs are for the Owner only: a Store Keeper's page never asks for them.
+    showCost
+      ? supabase.from("stock_batches").select("id, unit_cost").eq("item_id", itemId)
+      : Promise.resolve({ data: null }),
   ]);
 
   if (!item) notFound();
+
+  const unitCost = new Map((costRows ?? []).map((c) => [c.id, c.unit_cost]));
 
   const activeBatches = (batches ?? []).filter((b) => b.quantity_remaining !== 0);
 
@@ -52,8 +63,8 @@ export default async function StockBatchesPage({
               <th className="px-4 py-3">Batch</th>
               <th className="px-4 py-3">Expiry</th>
               <th className="px-4 py-3 text-right">Remaining</th>
-              <th className="px-4 py-3 text-right">Unit Cost</th>
-              <th className="px-4 py-3 text-right">Value</th>
+              {showCost && <th className="px-4 py-3 text-right">Unit Cost</th>}
+              {showCost && <th className="px-4 py-3 text-right">Value</th>}
             </tr>
           </thead>
           <tbody>
@@ -79,18 +90,22 @@ export default async function StockBatchesPage({
                       {formatQuantity(batch.quantity_remaining)} {item.base_unit}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-right tabular-nums text-foreground">
-                    {formatCurrency(batch.unit_cost)}
-                  </td>
-                  <td className="px-4 py-3 text-right tabular-nums text-foreground">
-                    {formatCurrency(batch.quantity_remaining * batch.unit_cost)}
-                  </td>
+                  {showCost && (
+                    <td className="px-4 py-3 text-right tabular-nums text-foreground">
+                      {formatCurrency(unitCost.get(batch.id) ?? 0)}
+                    </td>
+                  )}
+                  {showCost && (
+                    <td className="px-4 py-3 text-right tabular-nums text-foreground">
+                      {formatCurrency(batch.quantity_remaining * (unitCost.get(batch.id) ?? 0))}
+                    </td>
+                  )}
                 </tr>
               );
             })}
             {activeBatches.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-muted">
+                <td colSpan={showCost ? 5 : 3} className="px-4 py-8 text-center text-muted">
                   No stock recorded for this item yet.
                 </td>
               </tr>

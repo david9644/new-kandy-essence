@@ -211,6 +211,10 @@ export default async function InvoiceDetailPage({
         <div className="rounded-xl border border-border bg-surface p-4 text-sm">
           <dl className="flex flex-col gap-1.5">
             <div className="flex justify-between">
+              <dt className="text-muted">Items</dt>
+              <dd className="tabular-nums text-foreground">{(lines ?? []).length}</dd>
+            </div>
+            <div className="flex justify-between">
               <dt className="text-muted">Subtotal</dt>
               <dd className="tabular-nums text-foreground">{formatCurrency(invoice.subtotal)}</dd>
             </div>

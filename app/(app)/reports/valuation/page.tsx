@@ -1,11 +1,11 @@
-import { requireProfile } from "@/lib/auth/session";
+import { requireOwner } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { PrintLayout } from "@/components/shared/print-layout";
 import { BackButton } from "@/components/shared/back-button";
 import { formatCurrency, formatQuantity } from "@/lib/units";
 
 export default async function StockValuationReportPage() {
-  await requireProfile();
+  await requireOwner(); // every figure here is a purchase cost
   const supabase = await createClient();
 
   const { data: batches } = await supabase

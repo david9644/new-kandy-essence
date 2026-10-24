@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requireProfile } from "@/lib/auth/session";
+import { requireOwner } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { formatCurrency, formatQuantity } from "@/lib/units";
 import { PurchaseHeaderEditForm } from "@/components/purchases/purchase-header-edit-form";
@@ -18,7 +18,7 @@ export default async function PurchaseDetailPage({
   params: Promise<{ purchaseId: string }>;
 }) {
   const { purchaseId } = await params;
-  const profile = await requireProfile();
+  const profile = await requireOwner(); // unit costs and totals: Owner only
   const supabase = await createClient();
 
   const [{ data: purchase }, { data: lines }] = await Promise.all([

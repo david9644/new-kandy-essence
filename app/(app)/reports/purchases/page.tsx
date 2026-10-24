@@ -1,4 +1,4 @@
-import { requireProfile } from "@/lib/auth/session";
+import { requireOwner } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { fetchAll } from "@/lib/supabase/fetch-all";
 import { PrintLayout } from "@/components/shared/print-layout";
@@ -19,7 +19,7 @@ export default async function PurchaseReportPage({
 }: {
   searchParams: Promise<{ from?: string; to?: string; supplier_id?: string; item_id?: string }>;
 }) {
-  await requireProfile();
+  await requireOwner(); // purchase costs and totals are for the Owner only
   const { from, to, supplier_id, item_id } = await searchParams;
   const fromDate = from || monthStartIso();
   const toDate = to || todayIso();

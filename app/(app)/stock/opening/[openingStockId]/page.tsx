@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { requireProfile } from "@/lib/auth/session";
+import { requireOwner } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { formatCurrency, formatQuantity } from "@/lib/units";
 import { EditOpeningStockForm } from "@/components/stock/edit-opening-stock-form";
@@ -13,7 +13,7 @@ export default async function OpeningStockDetailPage({
   params: Promise<{ openingStockId: string }>;
 }) {
   const { openingStockId } = await params;
-  const profile = await requireProfile();
+  const profile = await requireOwner(); // cost price: Owner only
   const supabase = await createClient();
 
   const { data: entry } = await supabase

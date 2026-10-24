@@ -13,7 +13,8 @@ export interface ItemRow {
   category_name: string | null;
   base_unit: string;
   reorder_level: number;
-  last_purchase_cost: number | null;
+  /** Owner only: left out (not even sent to the browser) for a Store Keeper. */
+  last_purchase_cost?: number | null;
   active: boolean;
 }
 
@@ -25,12 +26,15 @@ export function ItemsTable({
   page,
   pageSize,
   query,
+  showCost,
 }: {
   items: ItemRow[];
   total: number;
   page: number;
   pageSize: number;
   query: string;
+  /** Purchase costs are for the Owner only. */
+  showCost: boolean;
 }) {
   const router = useRouter();
   const [text, setText] = useState(query);
@@ -82,7 +86,7 @@ export function ItemsTable({
               <th className="px-4 py-3">Category</th>
               <th className="px-4 py-3">Unit</th>
               <th className="px-4 py-3 text-right">Reorder Lvl</th>
-              <th className="px-4 py-3 text-right">Last Cost</th>
+              {showCost && <th className="px-4 py-3 text-right">Last Cost</th>}
               <th className="px-4 py-3">Status</th>
             </tr>
           </thead>
@@ -100,9 +104,11 @@ export function ItemsTable({
                 <td className="px-4 py-3 text-right tabular-nums">
                   {formatQuantity(item.reorder_level)}
                 </td>
-                <td className="px-4 py-3 text-right tabular-nums">
-                  {item.last_purchase_cost != null ? formatCurrency(item.last_purchase_cost) : "-"}
-                </td>
+                {showCost && (
+                  <td className="px-4 py-3 text-right tabular-nums">
+                    {item.last_purchase_cost != null ? formatCurrency(item.last_purchase_cost) : "-"}
+                  </td>
+                )}
                 <td className="px-4 py-3">
                   {item.active ? (
                     <span className="rounded-full bg-success-surface px-2 py-1 text-xs font-medium text-success">
@@ -118,7 +124,7 @@ export function ItemsTable({
             ))}
             {items.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-muted">
+                <td colSpan={showCost ? 7 : 6} className="px-4 py-8 text-center text-muted">
                   No items found.
                 </td>
               </tr>

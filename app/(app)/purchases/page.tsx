@@ -1,10 +1,14 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { requireProfile } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { formatCurrency } from "@/lib/units";
 
 export default async function PurchasesPage() {
-  await requireProfile();
+  const profile = await requireProfile();
+  // The list is all purchase totals: Owner only. A Store Keeper can still enter a
+  // purchase, so their Purchases button lands on the entry screen.
+  if (profile.role !== "owner") redirect("/purchases/new");
   const supabase = await createClient();
 
   const { data: purchases } = await supabase

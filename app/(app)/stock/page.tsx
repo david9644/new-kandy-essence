@@ -5,7 +5,8 @@ import { StockOverviewTable, type StockRow } from "@/components/stock/stock-over
 import { StockRealtimeRefresh } from "@/components/stock/stock-realtime-refresh";
 
 export default async function StockOverviewPage() {
-  await requireProfile();
+  const profile = await requireProfile();
+  const showCost = profile.role === "owner";
   const supabase = await createClient();
 
   const [items, summary] = await Promise.all([
@@ -21,6 +22,8 @@ export default async function StockOverviewPage() {
     fetchAll((from, to) =>
       supabase
         .from("item_stock_summary")
+        // total_value comes back empty for a Store Keeper (the view masks it);
+        // the table below does not show it to them either.
         .select("item_id, total_quantity, total_value")
         .order("item_id")
         .range(from, to)
@@ -44,7 +47,7 @@ export default async function StockOverviewPage() {
       reorder_level: item.reorder_level,
       secondary_unit: biggestUnit ?? null,
       total_quantity: s?.qty ?? 0,
-      total_value: s?.value ?? 0,
+      ...(showCost ? { total_value: s?.value ?? 0 } : {}),
     };
   });
 
@@ -52,7 +55,7 @@ export default async function StockOverviewPage() {
     <div className="border-t-[3px] border-t-accent-stock pt-3">
       <StockRealtimeRefresh />
       <h1 className="mb-4 text-2xl font-semibold text-foreground">Stock Overview</h1>
-      <StockOverviewTable rows={rows} />
+      <StockOverviewTable rows={rows} showCost={showCost} />
     </div>
   );
 }

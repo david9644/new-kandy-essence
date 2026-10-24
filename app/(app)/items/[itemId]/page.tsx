@@ -18,7 +18,12 @@ export default async function ItemDetailPage({
   const supabase = await createClient();
 
   const [{ data: item }, { data: categories }, { data: units }] = await Promise.all([
-    supabase.from("items").select("*").eq("id", itemId).maybeSingle(),
+    // Explicit columns: last_purchase_cost is the Owner's, read below.
+    supabase
+      .from("items")
+      .select("id, code, name, category_id, base_unit, reorder_level, batch_tracked, active, sale_price")
+      .eq("id", itemId)
+      .maybeSingle(),
     supabase.from("categories").select("id, name").order("name"),
     supabase
       .from("item_units")
@@ -27,6 +32,14 @@ export default async function ItemDetailPage({
   ]);
 
   if (!item) notFound();
+
+  // Purchase costs are for the Owner only (owner-checked function; a Store Keeper
+  // never asks for it).
+  let lastCost: number | null = null;
+  if (profile.role === "owner") {
+    const { data: costRows } = await supabase.rpc("get_item_last_costs", { p_ids: [itemId] });
+    lastCost = costRows?.[0]?.last_purchase_cost ?? null;
+  }
 
   const boundUpdate = updateItem.bind(null, itemId);
 
@@ -46,9 +59,9 @@ export default async function ItemDetailPage({
         )}
       </div>
 
-      {item.last_purchase_cost != null && (
+      {lastCost != null && (
         <p className="mb-4 text-sm text-muted">
-          Last purchase cost: {formatCurrency(item.last_purchase_cost)} per {item.base_unit}
+          Last purchase cost: {formatCurrency(lastCost)} per {item.base_unit}
         </p>
       )}
 

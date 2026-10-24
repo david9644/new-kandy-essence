@@ -282,3 +282,46 @@ test("settings: strikeMode default, validation, query round-trip", () => {
   assert.equal(applyOverrides(S, { sm: "nonsense" }).strikeMode, "strike");
   assert.equal(fmtMoney(360), "360.00");
 });
+
+// ── "Items: N" (number of bill lines; nothing is added up across units) ─
+
+test("printed bill shows 'Items: N' = the number of bill lines: 0, 1 and many", () => {
+  for (const n of [0, 1, 2, 12, 60]) {
+    const inv = n === 0 ? billOf([]) : sampleInvoice(n);
+    for (const mode of MODES) {
+      const r = layoutBill(inv, { ...S, strikeMode: mode });
+      const text = textOf(r.pages);
+      const hits = text.match(/^Items: \d+ *$/gm) ?? [];
+      assert.equal(hits.length, 1, `${n} lines / ${mode}: exactly one Items line`);
+      assert.equal(hits[0].trim(), `Items: ${n}`);
+      r.pages.forEach((p) => p.forEach((l) => assert.equal(l.length, 49)));
+      // it sits at the top of the totals block, right under the separator, before the money
+      const lines = r.pages.at(-1)!.map((l) => l.trimEnd());
+      const at = lines.findIndex((l) => l === `Items: ${n}`);
+      assert.match(lines[at - 1], /^-+$/);
+      assert.match(lines[at + 1], /^Subtotal/);
+      // no quantity totals anywhere
+      assert.ok(!/total qty/i.test(text));
+    }
+  }
+});
+
+test("a long bill cut into pieces shows 'Items: N' once, on the last piece, with N = all lines", () => {
+  const inv = sampleInvoice(120);
+  const r = layoutBill(inv, S);
+  assert.equal(r.mode, "pieces");
+  const perPiece = r.pages.map((p) => (p.join("\n").match(/^Items: \d+/gm) ?? []).length);
+  assert.deepEqual(perPiece, r.pages.map((_, i) => (i === r.pages.length - 1 ? 1 : 0)));
+  assert.match(textOf(r.pages), /^Items: 120 *$/m);
+});
+
+test("the Items line costs exactly one printed line in the continuous height count", () => {
+  const inv = sampleInvoice(10);
+  const r = layoutBill(inv, S);
+  const used = r.pages[0].findLastIndex((l) => l.trim() !== "") + 1;
+  // the same bill with the Items line taken out has one line fewer
+  const without = r.pages[0].filter((l) => !/^Items: \d+/.test(l.trimEnd()));
+  const usedWithout = without.findLastIndex((l) => l.trim() !== "") + 1;
+  assert.equal(used - usedWithout, 1);
+  assert.equal(r.pageHeightsIn[0], printedHeight(S, used).heightIn);
+});

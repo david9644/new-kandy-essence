@@ -355,6 +355,8 @@ function paymentLabel(p: PrintInvoicePayment): string {
 
 function totalsBlock(inv: PrintInvoice, cols: number): string[] {
   const out: string[] = [SEP(cols)];
+  // how many bill lines (items) the bill has; nothing is added up across units
+  out.push(`Items: ${inv.lines.length}`);
   out.push(...row("Subtotal", fmtMoney(inv.subtotal), cols));
   if (inv.lineDiscountTotal > 0.004) {
     out.push(...row("Line discounts", `-${fmtMoney(inv.lineDiscountTotal)}`, cols));

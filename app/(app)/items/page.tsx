@@ -24,7 +24,7 @@ export default async function ItemsPage({
 
   let query = supabase
     .from("items")
-    .select("id, code, name, base_unit, reorder_level, last_purchase_cost, active, categories(name)", {
+    .select("id, code, name, base_unit, reorder_level, active, categories(name)", {
       count: "exact",
     })
     .order("name")
@@ -35,6 +35,17 @@ export default async function ItemsPage({
 
   const { data, count } = await query;
 
+  // Purchase costs are for the Owner only: the column is never selected here, the
+  // owner's costs come through an owner-checked function, a Store Keeper gets none.
+  const isOwner = profile.role === "owner";
+  const costs = new Map<string, number>();
+  if (isOwner && (data ?? []).length > 0) {
+    const { data: costRows } = await supabase.rpc("get_item_last_costs", {
+      p_ids: (data ?? []).map((row) => row.id),
+    });
+    for (const c of costRows ?? []) costs.set(c.item_id, c.last_purchase_cost);
+  }
+
   const items: ItemRow[] = (data ?? []).map((row) => ({
     id: row.id,
     code: row.code,
@@ -42,7 +53,7 @@ export default async function ItemsPage({
     category_name: (row.categories as { name: string } | null)?.name ?? null,
     base_unit: row.base_unit,
     reorder_level: row.reorder_level,
-    last_purchase_cost: row.last_purchase_cost,
+    ...(isOwner ? { last_purchase_cost: costs.get(row.id) ?? null } : {}),
     active: row.active,
   }));
 
@@ -67,7 +78,14 @@ export default async function ItemsPage({
           </div>
         )}
       </div>
-      <ItemsTable items={items} total={count ?? items.length} page={page} pageSize={PAGE_SIZE} query={q} />
+      <ItemsTable
+        items={items}
+        total={count ?? items.length}
+        page={page}
+        pageSize={PAGE_SIZE}
+        query={q}
+        showCost={isOwner}
+      />
     </div>
   );
 }

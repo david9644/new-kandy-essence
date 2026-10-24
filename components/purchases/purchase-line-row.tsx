@@ -198,9 +198,11 @@ export function PurchaseLineRow({
         </div>
       )}
 
-      <p className="mt-2 text-right text-sm font-medium text-foreground">
-        Line total: {formatCurrency(lineTotal(line))}
-      </p>
+      {isOwner && (
+        <p className="mt-2 text-right text-sm font-medium text-foreground">
+          Line total: {formatCurrency(lineTotal(line))}
+        </p>
+      )}
     </div>
   );
 }

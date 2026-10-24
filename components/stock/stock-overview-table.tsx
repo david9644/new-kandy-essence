@@ -13,14 +13,15 @@ export interface StockRow {
   reorder_level: number;
   secondary_unit: { unit_name: string; conversion_factor_to_base: number } | null;
   total_quantity: number;
-  total_value: number;
+  /** Owner only: left out (not even sent to the browser) for a Store Keeper. */
+  total_value?: number;
 }
 
 // Rows drawn at once: 3,000 items as one table is ~24,000 page elements (about
 // a third of a second to draw), so it shows a page and "Show more".
 const ROW_PAGE = 100;
 
-export function StockOverviewTable({ rows }: { rows: StockRow[] }) {
+export function StockOverviewTable({ rows, showCost }: { rows: StockRow[]; showCost: boolean }) {
   const [query, setQuery] = useState("");
   const [shown, setShown] = useState(ROW_PAGE);
 
@@ -49,14 +50,14 @@ export function StockOverviewTable({ rows }: { rows: StockRow[] }) {
             <tr>
               <th className="px-4 py-3">Item</th>
               <th className="px-4 py-3 text-right">On Hand</th>
-              <th className="px-4 py-3 text-right">Avg Cost</th>
-              <th className="px-4 py-3 text-right">Stock Value</th>
+              {showCost && <th className="px-4 py-3 text-right">Avg Cost</th>}
+              {showCost && <th className="px-4 py-3 text-right">Stock Value</th>}
             </tr>
           </thead>
           <tbody>
             {filtered.slice(0, shown).map((row) => {
               const low = row.total_quantity <= row.reorder_level;
-              const avgCost = row.total_quantity !== 0 ? row.total_value / row.total_quantity : 0;
+              const avgCost = row.total_quantity !== 0 ? (row.total_value ?? 0) / row.total_quantity : 0;
               const secondaryQty = row.secondary_unit
                 ? row.total_quantity / row.secondary_unit.conversion_factor_to_base
                 : null;
@@ -79,18 +80,22 @@ export function StockOverviewTable({ rows }: { rows: StockRow[] }) {
                     )}
                     {low && <p className="text-xs text-danger">Reorder</p>}
                   </td>
-                  <td className="px-4 py-3 text-right tabular-nums text-foreground">
-                    {formatCurrency(avgCost)}
-                  </td>
-                  <td className="px-4 py-3 text-right tabular-nums text-foreground">
-                    {formatCurrency(row.total_value)}
-                  </td>
+                  {showCost && (
+                    <td className="px-4 py-3 text-right tabular-nums text-foreground">
+                      {formatCurrency(avgCost)}
+                    </td>
+                  )}
+                  {showCost && (
+                    <td className="px-4 py-3 text-right tabular-nums text-foreground">
+                      {formatCurrency(row.total_value ?? 0)}
+                    </td>
+                  )}
                 </tr>
               );
             })}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-muted">
+                <td colSpan={showCost ? 4 : 2} className="px-4 py-8 text-center text-muted">
                   No items found.
                 </td>
               </tr>

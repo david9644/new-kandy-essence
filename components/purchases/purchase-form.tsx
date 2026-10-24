@@ -131,7 +131,12 @@ export function PurchaseForm({
       if (result?.error) {
         setError(result.error);
       } else if (result?.ok) {
-        setSuccessMessage(`Purchase of ${formatCurrency(total)} from ${supplierName} saved.`);
+        // The amount is a purchase total: Owner only.
+        setSuccessMessage(
+          isOwner
+            ? `Purchase of ${formatCurrency(total)} from ${supplierName} saved.`
+            : `Purchase from ${supplierName} saved.`
+        );
         reset();
 
         // Selling prices are a SEPARATE step after the purchase is safely saved:
@@ -280,7 +285,13 @@ export function PurchaseForm({
       </div>
 
       {paymentType === "cheque" && (
-        <ChequeFields bankAccounts={bankAccounts} value={cheque} onChange={setCheque} amount={grandTotal} />
+        <ChequeFields
+          bankAccounts={bankAccounts}
+          value={cheque}
+          onChange={setCheque}
+          amount={grandTotal}
+          hideAmounts={!isOwner}
+        />
       )}
 
       <div>
@@ -293,10 +304,12 @@ export function PurchaseForm({
         />
       </div>
 
-      <div className="flex items-center justify-between rounded-lg bg-background px-4 py-3">
-        <span className="text-sm font-medium text-muted">Grand Total</span>
-        <span className="text-xl font-semibold text-foreground">{formatCurrency(grandTotal)}</span>
-      </div>
+      {isOwner && (
+        <div className="flex items-center justify-between rounded-lg bg-background px-4 py-3">
+          <span className="text-sm font-medium text-muted">Grand Total</span>
+          <span className="text-xl font-semibold text-foreground">{formatCurrency(grandTotal)}</span>
+        </div>
+      )}
 
       <button
         type="submit"

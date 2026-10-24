@@ -17,10 +17,14 @@ export function ChequeFields({
   value,
   onChange,
   amount,
+  hideAmounts = false,
 }: {
   bankAccounts: BankAccountOption[];
   value: ChequeInput;
   onChange: (next: ChequeInput) => void;
+  /** Purchase totals are for the Owner only: the amount box and the daily-limit
+   * warning (which quotes totals) are not shown. The cheque still carries the amount. */
+  hideAmounts?: boolean;
   /** The purchase total or payment amount -- the cheque amount always
    * equals this, so it's never a separately-typed field that could drift
    * from it. */
@@ -116,13 +120,15 @@ export function ChequeFields({
           />
         </div>
       </div>
-      <div>
-        <label className="mb-1 block text-xs font-medium text-muted">Cheque Amount</label>
-        <div className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-right text-sm tabular-nums text-muted">
-          {formatCurrency(amount)}
+      {!hideAmounts && (
+        <div>
+          <label className="mb-1 block text-xs font-medium text-muted">Cheque Amount</label>
+          <div className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-right text-sm tabular-nums text-muted">
+            {formatCurrency(amount)}
+          </div>
         </div>
-      </div>
-      {overDailyLimit && (
+      )}
+      {!hideAmounts && overDailyLimit && (
         <p className="rounded-lg bg-warning-surface px-3 py-2 text-sm text-warning">
           Cheques dated {value.cheque_date} would total {formatCurrency(projectedTotal)} — over
           your {formatCurrency(dailyLimit)} daily limit.

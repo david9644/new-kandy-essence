@@ -75,7 +75,7 @@ const LineRowView = memo(function LineRowView({
             </span>
           ) : (
             <span className="tabular-nums">
-              {formatRs(Number(line.unitPrice))} / {unitLabel}
+              {line.quantity || "0"} {unitLabel} &times; {formatRs(Number(line.unitPrice))}
             </span>
           )}
           {Number(line.discount) > 0 && <span>− {formatRs(Number(line.discount))}</span>}
@@ -303,6 +303,12 @@ export function BillPanel(p: BillPanelProps) {
       {/* ── totals ── */}
       <div className={`${CARD} shrink-0 px-4 py-3`}>
         <div className="flex items-center justify-between text-sm text-muted">
+          <span>Items</span>
+          <span className="tabular-nums" data-testid="item-count">
+            {p.lines.length}
+          </span>
+        </div>
+        <div className="mt-1 flex items-center justify-between text-sm text-muted">
           <span>Goods</span>
           <span className="tabular-nums">{formatRs(goods)}</span>
         </div>
