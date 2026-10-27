@@ -13,6 +13,7 @@
 import { formatQuantity } from "../units";
 import { lineAmounts } from "../line-price";
 import {
+  cashierShown,
   deriveGrid,
   printedHeight,
   rowsForHeight,
@@ -314,7 +315,14 @@ function fullHeader(inv: PrintInvoice, c: Columns, cols: number, page: number, c
   const out: string[] = [...businessLines(inv.business, cols, true)];
   if (out.length > 0) out.push(SEP(cols));
   out.push(...row(`Bill: ${inv.invoiceNo}${inv.label ? "  " + inv.label : ""}`, pageText(page, count), cols));
-  out.push(...row(`Date: ${inv.date}`, inv.cashierName ? `Cashier: ${clean(inv.cashierName)}` : "", cols));
+  const dateText = `Date: ${inv.date}`;
+  const cashierText = inv.cashierName ? `Cashier: ${clean(inv.cashierName)}` : "";
+  if (cashierText && dateText.length + 1 + cashierText.length > cols) {
+    // both do not fit side by side: the date keeps its own line, the cashier text wraps below
+    out.push(dateText, ...wrap(cashierText, cols));
+  } else {
+    out.push(...row(dateText, cashierText, cols));
+  }
   if (inv.customerName) {
     const code = clean(inv.customerCode);
     out.push(...wrap(`Customer: ${inv.customerName}${code ? ` (${code})` : ""}`, cols));
@@ -518,7 +526,13 @@ function fitTo(lines: Ln[], cols: number, rows: number, counters: { clipped: num
  *  "Page x of y", totals never split); only the last piece is shorter.
  *
  *  continuous OFF: the original behaviour, pages of one sheet each. */
-export function layoutBill(inv: PrintInvoice, settings: PrintSettings): BillLayout {
+export function layoutBill(invoice: PrintInvoice, settings: PrintSettings): BillLayout {
+  // What follows "Cashier:" is the setting (default "New Kandy Essence"), the same
+  // on every bill; the stored user name is only the fallback for an empty setting.
+  const inv: PrintInvoice = {
+    ...invoice,
+    cashierName: cashierShown(settings.cashierText, invoice.cashierName),
+  };
   const grid = deriveGrid(settings);
   const { cols } = grid;
 

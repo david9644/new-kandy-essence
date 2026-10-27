@@ -34,6 +34,7 @@ export type Database = {
           print_page_height_in: number
           print_page_width_in: number
           print_strike_mode: string
+          print_cashier_text: string
         }
         Insert: {
           business_address?: string | null
@@ -54,6 +55,7 @@ export type Database = {
           print_page_height_in?: number
           print_page_width_in?: number
           print_strike_mode?: string
+          print_cashier_text?: string
         }
         Update: {
           business_address?: string | null
@@ -74,6 +76,7 @@ export type Database = {
           print_page_height_in?: number
           print_page_width_in?: number
           print_strike_mode?: string
+          print_cashier_text?: string
         }
         Relationships: []
       }

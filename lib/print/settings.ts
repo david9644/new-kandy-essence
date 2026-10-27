@@ -27,6 +27,9 @@ export interface PrintSettings {
   maxSheets: number;
   /** Crossed-out normal price on discounted lines (see StrikeMode). */
   strikeMode: StrikeMode;
+  /** Text printed after "Cashier:" on every bill. Empty = show the stored user
+   * name instead (what the bill did before this setting existed). */
+  cashierText: string;
 }
 
 export interface PrintGrid {
@@ -54,7 +57,23 @@ export const DEFAULT_PRINT_SETTINGS: PrintSettings = {
   continuous: true,
   maxSheets: 6,
   strikeMode: "strike",
+  cashierText: "New Kandy Essence",
 };
+
+/** Longest "Cashier:" text. "Cashier: " plus 30 characters is 39 of the 49
+ * characters on a line, so it always fits (the date moves to its own line when
+ * both together would not). */
+export const CASHIER_TEXT_MAX = 30;
+
+/** What follows "Cashier:" on a bill: the configured text, or - when the owner
+ * cleared it - the user name stored on the invoice, or nothing at all. The same
+ * text for every bill, whoever created it. */
+export function cashierShown(setting: string, storedUserName: string | null): string | null {
+  const text = setting.replace(/\s+/g, " ").trim();
+  if (text) return text;
+  const user = (storedUserName ?? "").replace(/\s+/g, " ").trim();
+  return user || null;
+}
 
 export const MIN_COLS = 30;
 export const MIN_ROWS = 20;
@@ -117,6 +136,10 @@ export function validatePrintSettings(s: PrintSettings): string | null {
   if (!STRIKE_MODES.includes(s.strikeMode)) {
     return "Choose how the normal price of a discounted line is printed.";
   }
+  if (s.cashierText.length > CASHIER_TEXT_MAX) {
+    return `The name shown after Cashier can be at most ${CASHIER_TEXT_MAX} characters.`;
+  }
+  if (/[\r\n]/.test(s.cashierText)) return "The name shown after Cashier must be a single line.";
   if (s.footer.length > 80) return "The footer line can be at most 80 characters.";
   if (/[\r\n]/.test(s.footer)) return "The footer must be a single line.";
 
@@ -153,6 +176,8 @@ export function applyOverrides(
     const v = Array.isArray(raw) ? raw[0] : raw;
     return (STRIKE_MODES as readonly string[]).includes(v ?? "") ? (v as StrikeMode) : fallback;
   };
+  const cashierRaw = params.cashier;
+  const cashier = Array.isArray(cashierRaw) ? cashierRaw[0] : cashierRaw;
   const footerRaw = params.footer;
   const footer = Array.isArray(footerRaw) ? footerRaw[0] : footerRaw;
   return {
@@ -168,6 +193,7 @@ export function applyOverrides(
     continuous: flag("cont", base.continuous),
     maxSheets: num("maxs", base.maxSheets),
     strikeMode: strikeParam(params.sm, base.strikeMode),
+    cashierText: cashier !== undefined ? cashier : base.cashierText,
   };
 }
 
@@ -185,6 +211,7 @@ export function settingsToQuery(s: PrintSettings): string {
     cont: s.continuous ? "1" : "0",
     maxs: String(s.maxSheets),
     sm: s.strikeMode,
+    cashier: s.cashierText,
   });
   return p.toString();
 }

@@ -7,6 +7,7 @@ import { KeyboardNumberInput } from "@/components/keyboard/keyboard-number-input
 import { KeyboardTextInput } from "@/components/keyboard/keyboard-text-input";
 import { layoutBill, sampleInvoice } from "@/lib/print/invoice-layout";
 import {
+  CASHIER_TEXT_MAX,
   DEFAULT_PRINT_SETTINGS,
   deriveGrid,
   settingsToQuery,
@@ -18,8 +19,13 @@ import {
 const NUM =
   "w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-right text-sm tabular-nums text-foreground focus:border-primary focus:outline-none";
 
-type NumKey = Exclude<keyof PrintSettings, "footer" | "continuous" | "strikeMode">;
-type Draft = Record<NumKey, string> & { footer: string; continuous: boolean; strikeMode: StrikeMode };
+type NumKey = Exclude<keyof PrintSettings, "footer" | "continuous" | "strikeMode" | "cashierText">;
+type Draft = Record<NumKey, string> & {
+  footer: string;
+  continuous: boolean;
+  strikeMode: StrikeMode;
+  cashierText: string;
+};
 
 function toDraft(s: PrintSettings): Draft {
   return {
@@ -35,6 +41,7 @@ function toDraft(s: PrintSettings): Draft {
     continuous: s.continuous,
     maxSheets: String(s.maxSheets),
     strikeMode: s.strikeMode,
+    cashierText: s.cashierText,
   };
 }
 
@@ -53,6 +60,7 @@ function fromDraft(d: Draft): PrintSettings {
     continuous: d.continuous,
     maxSheets: n(d.maxSheets),
     strikeMode: d.strikeMode,
+    cashierText: d.cashierText,
   };
 }
 
@@ -207,6 +215,21 @@ export function PrintingSettingsForm({
           onChange={(v) => set("footer", v)}
           className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none"
         />
+      </div>
+
+      <div>
+        <label className="mb-1 block text-xs font-medium text-muted">Name shown after Cashier</label>
+        <KeyboardTextInput
+          value={draft.cashierText}
+          onChange={(v) => set("cashierText", v)}
+          placeholder="New Kandy Essence"
+          className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none"
+        />
+        <p className="mt-0.5 text-[11px] text-muted">
+          Printed as &ldquo;Cashier: {draft.cashierText.trim() || "(the user’s name)"}&rdquo; on every
+          bill, whoever made it &mdash; up to {CASHIER_TEXT_MAX} characters. Leave it empty to print
+          the name of the user who made the bill instead.
+        </p>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
