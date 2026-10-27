@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { NumericKeypad, type NumericKey } from "@/components/NumericKeypad";
 import { AppFooter } from "@/components/shared/app-footer";
+import { DEFAULT_LANDING, safeNextPath } from "@/lib/start-page";
 
 const MAX_PIN_LENGTH = 6;
 
@@ -45,7 +46,10 @@ export default function LoginPage() {
         return;
       }
 
-      window.location.assign("/dashboard");
+      // the page that was asked for before the login (kept in ?next=), else the new bill:
+      // straight there, the Dashboard is never loaded first
+      const wanted = safeNextPath(new URLSearchParams(window.location.search).get("next"));
+      window.location.assign(wanted ?? DEFAULT_LANDING);
     } catch {
       setError("Network error. Try again.");
       setPin("");

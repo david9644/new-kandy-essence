@@ -149,6 +149,9 @@ export function PrintFrame({
   backHref,
   backLabel = "Back",
   autoPrint = false,
+  autoPrintKey,
+  onAutoPrint,
+  newBillHref,
   onAfterPrint,
   toolbarExtra,
   status,
@@ -161,6 +164,12 @@ export function PrintFrame({
   backHref: string;
   backLabel?: string;
   autoPrint?: boolean;
+  /** Identifies this document for the "already printed automatically" memory. */
+  autoPrintKey?: string;
+  /** Called right before an automatic print starts. */
+  onAutoPrint?: () => void;
+  /** When set, a "New bill" button is always shown in the toolbar. */
+  newBillHref?: string;
   onAfterPrint?: () => void;
   toolbarExtra?: React.ReactNode;
   status?: React.ReactNode;
@@ -182,15 +191,46 @@ export function PrintFrame({
     return () => window.removeEventListener("afterprint", handler);
   }, []);
 
+  const onAutoPrintRef = useRef(onAutoPrint);
+  useEffect(() => {
+    onAutoPrintRef.current = onAutoPrint;
+  }, [onAutoPrint]);
+
+  // The automatic print happens at most ONCE per document: not twice by React's
+  // double effect (autoDone), not again after a reload or Back/Forward (the
+  // sessionStorage memory, and the address stops asking for it). Printing again
+  // is only ever the Print button, on purpose.
   useEffect(() => {
     if (!autoPrint) return;
     const timer = window.setTimeout(() => {
       if (autoDone.current) return;
+      const memory = autoPrintKey ? `nke-autoprint:${autoPrintKey}` : null;
+      try {
+        if (memory && window.sessionStorage.getItem(memory)) return;
+      } catch {
+        // no sessionStorage: the server-side "printed before" check still protects a reload
+      }
       autoDone.current = true;
+      try {
+        if (memory) window.sessionStorage.setItem(memory, "1");
+      } catch {
+        // see above
+      }
+      try {
+        const url = new URL(window.location.href);
+        if (url.searchParams.has("auto") || url.searchParams.has("next")) {
+          url.searchParams.delete("auto");
+          url.searchParams.delete("next");
+          window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
+        }
+      } catch {
+        // cosmetic only
+      }
+      onAutoPrintRef.current?.();
       window.print();
     }, 700);
     return () => window.clearTimeout(timer);
-  }, [autoPrint]);
+  }, [autoPrint, autoPrintKey]);
 
   return (
     <div className="min-h-screen bg-neutral-300 pb-8 print:bg-white print:pb-0">
@@ -209,6 +249,15 @@ export function PrintFrame({
           >
             {backLabel}
           </Link>
+          {newBillHref && (
+            <Link
+              href={newBillHref}
+              replace
+              className="flex h-12 items-center rounded-xl border border-border px-5 text-base font-medium text-foreground active:bg-background"
+            >
+              New bill
+            </Link>
+          )}
           {toolbarExtra}
           <span className="ml-auto text-sm font-medium text-foreground">{title}</span>
         </div>

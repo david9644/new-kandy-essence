@@ -31,6 +31,9 @@ function rs0(amount: number): string {
   return `Rs ${amount.toLocaleString("en-LK", { maximumFractionDigits: 2 })}`;
 }
 
+/** What happens right after a NEW bill is saved: print it at once, or only save. */
+export type AfterSave = "print" | "only";
+
 export interface TakeMoneyProps {
   open: boolean;
   mode: "create" | "edit";
@@ -55,7 +58,8 @@ export interface TakeMoneyProps {
   date: string;
   onDate: (date: string) => void;
   saving: boolean;
-  onConfirm: () => void;
+  /** create mode: which button was pressed; edit mode: always "only" ("Done"). */
+  onConfirm: (after: AfterSave) => void;
 }
 
 export function TakeMoneyDialog(p: TakeMoneyProps) {
@@ -79,7 +83,7 @@ export function TakeMoneyDialog(p: TakeMoneyProps) {
             </p>
           )}
           <TapButton
-            onTap={p.onConfirm}
+            onTap={() => p.onConfirm(p.mode === "edit" ? "only" : "print")}
             disabled={blocked}
             className={`flex w-full items-center justify-center rounded-2xl bg-[#111827] text-lg font-semibold text-white active:opacity-80 disabled:opacity-40 ${padOpen ? "h-12" : "h-16"}`}
           >
@@ -87,8 +91,17 @@ export function TakeMoneyDialog(p: TakeMoneyProps) {
               ? "Saving..."
               : p.mode === "edit"
                 ? "Done"
-                : `Save the bill: ${formatRs(fromCents(p.totalC))}`}
+                : `Save & Print: ${formatRs(fromCents(p.totalC))}`}
           </TapButton>
+          {p.mode !== "edit" && (
+            <TapButton
+              onTap={() => p.onConfirm("only")}
+              disabled={blocked}
+              className="flex h-12 w-full items-center justify-center rounded-xl border border-border bg-surface text-base font-medium text-foreground active:bg-background disabled:opacity-40"
+            >
+              Save only
+            </TapButton>
+          )}
         </div>
       }
     >

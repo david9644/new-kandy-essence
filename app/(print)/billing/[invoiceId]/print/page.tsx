@@ -11,10 +11,10 @@ export default async function PrintInvoicePage({
   searchParams,
 }: {
   params: Promise<{ invoiceId: string }>;
-  searchParams: Promise<{ auto?: string }>;
+  searchParams: Promise<{ auto?: string; next?: string }>;
 }) {
   const { invoiceId } = await params;
-  const { auto } = await searchParams;
+  const { auto, next } = await searchParams;
   const supabase = await createClient();
 
   const [{ data: invoice }, { data: lines }, { data: payments }, config] = await Promise.all([
@@ -77,6 +77,7 @@ export default async function PrintInvoicePage({
       printCount={invoice.print_count}
       editCount={invoice.edit_count}
       autoPrint={auto === "1"}
+      returnToNewBill={next === "new"}
     />
   );
 }

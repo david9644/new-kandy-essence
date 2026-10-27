@@ -23,6 +23,13 @@ export interface SavedInfo {
   changeC: number;
 }
 
+/** The bill that "Save only" just saved (the till itself is already empty again). */
+export interface JustSaved {
+  invoiceId: string;
+  invoiceNo: string;
+  changeC: number;
+}
+
 const CARD = "rounded-2xl border border-border bg-surface";
 
 const LineRowView = memo(function LineRowView({
@@ -127,6 +134,41 @@ const LineRowView = memo(function LineRowView({
     </li>
   );
 });
+
+/** Shown above the till (both phone tabs) after "Save only". */
+export function JustSavedNotice({
+  info,
+  onDismiss,
+}: {
+  info: JustSaved;
+  onDismiss: () => void;
+}) {
+  return (
+    <div
+      role="status"
+      data-testid="just-saved"
+      className="mx-3 mt-2 flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl border border-success/40 bg-success-surface px-3 py-1 text-sm text-success md:mx-4"
+    >
+      <span className="font-semibold">Bill {info.invoiceNo} saved</span>
+      {info.changeC > 0 && (
+        <span className="font-semibold tabular-nums">
+          Change to give: {formatRs(fromCents(info.changeC))}
+        </span>
+      )}
+      <Link href={`/billing/${info.invoiceId}`} className="flex min-h-[44px] items-center font-semibold underline">
+        Open or print it
+      </Link>
+      <button
+        type="button"
+        onClick={onDismiss}
+        aria-label="Hide this message"
+        className="ml-auto flex h-11 w-11 items-center justify-center rounded-lg text-lg text-success active:bg-success/10"
+      >
+        ✕
+      </button>
+    </div>
+  );
+}
 
 export interface BillPanelProps {
   mode: "create" | "edit";

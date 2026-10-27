@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "@/lib/types/database.types";
+import { DEFAULT_LANDING, nextParamFor, safeNextPath } from "@/lib/start-page";
 
 const OWNER_ONLY_PREFIXES = [
   "/payments",
@@ -56,15 +57,22 @@ export async function updateSession(request: NextRequest) {
   ]);
 
   if (!user && !isPublic) {
+    // keep the page that was asked for, so the login can go straight to it
+    const wanted = nextParamFor(pathname, request.nextUrl.search);
     const url = request.nextUrl.clone();
     url.pathname = "/login";
+    url.search = "";
+    if (wanted) url.searchParams.set("next", wanted);
     return NextResponse.redirect(url);
   }
 
   if (user && pathname === "/login") {
-    const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
-    return NextResponse.redirect(url);
+    // already signed in: to the page that was asked for, else the new bill
+    const target = new URL(
+      safeNextPath(request.nextUrl.searchParams.get("next")) ?? DEFAULT_LANDING,
+      request.nextUrl.origin
+    );
+    return NextResponse.redirect(target);
   }
 
   if (user && ownerOnly) {

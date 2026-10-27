@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { PrintFrame } from "@/components/print/print-frame";
 import { layoutBill, type PrintInvoice } from "@/lib/print/invoice-layout";
 import type { PrintSettings } from "@/lib/print/settings";
@@ -18,6 +19,7 @@ export function InvoicePrintView({
   printCount: initialPrintCount,
   editCount,
   autoPrint,
+  returnToNewBill,
 }: {
   invoiceId: string;
   invoice: PrintInvoice;
@@ -25,10 +27,15 @@ export function InvoicePrintView({
   printCount: number;
   editCount: number;
   autoPrint: boolean;
+  /** Save & Print: after the automatic print, go back to a fresh empty new bill. */
+  returnToNewBill: boolean;
 }) {
+  const router = useRouter();
   const [printCount, setPrintCount] = useState(initialPrintCount);
   const [copyChecked, setCopyChecked] = useState(initialPrintCount > 0);
-  const [recording, setRecording] = useState(false);
+  const [recordFailed, setRecordFailed] = useState(false);
+  const recording = useRef(false);
+  const returnPending = useRef(false);
 
   const label = copyChecked ? "COPY" : editCount > 0 ? "REVISED" : null;
   const layout = useMemo(
@@ -36,17 +43,31 @@ export function InvoicePrintView({
     [invoice, label, settings]
   );
 
+  // A bill that was printed before is never printed automatically again (a reload
+  // of this page, Back/Forward): only the Print button prints it, as a COPY.
+  const autoPrintNow = autoPrint && initialPrintCount === 0;
+
   const handleAfterPrint = useCallback(async () => {
-    if (recording) return;
-    setRecording(true);
+    if (recording.current) return;
+    recording.current = true;
     const count = await recordInvoicePrint(invoiceId);
-    setRecording(false);
-    if (count !== null) {
-      setPrintCount(count);
-      // the next print of this bill is a copy
-      setCopyChecked(true);
+    recording.current = false;
+    if (count === null) {
+      // printed, but not recorded: stay here so nobody misses it (no retry: a retry
+      // could count the same print twice)
+      returnPending.current = false;
+      setRecordFailed(true);
+      return;
     }
-  }, [invoiceId, recording]);
+    setPrintCount(count);
+    // the next print of this bill is a copy
+    setCopyChecked(true);
+    if (returnPending.current) {
+      returnPending.current = false;
+      // replace: Back from the new bill never lands on this print view
+      router.replace("/billing/new");
+    }
+  }, [invoiceId, router]);
 
   return (
     <PrintFrame
@@ -57,7 +78,12 @@ export function InvoicePrintView({
       title={invoice.invoiceNo}
       backHref={`/billing/${invoiceId}`}
       backLabel="Back to bill"
-      autoPrint={autoPrint}
+      autoPrint={autoPrintNow}
+      autoPrintKey={invoiceId}
+      onAutoPrint={() => {
+        returnPending.current = returnToNewBill;
+      }}
+      newBillHref="/billing/new"
       onAfterPrint={handleAfterPrint}
       toolbarExtra={
         <label className="flex h-12 items-center gap-2 rounded-xl border border-border px-4 text-sm font-medium text-foreground">
@@ -71,9 +97,11 @@ export function InvoicePrintView({
         </label>
       }
       status={
-        printCount > 0
-          ? `This bill has been printed ${printCount} time${printCount === 1 ? "" : "s"}.`
-          : "Not printed yet."
+        recordFailed
+          ? "It printed, but the print could not be recorded on the bill. Press New bill to carry on."
+          : printCount > 0
+            ? `This bill has been printed ${printCount} time${printCount === 1 ? "" : "s"}.`
+            : "Not printed yet."
       }
     />
   );

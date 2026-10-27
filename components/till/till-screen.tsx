@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { DeletePinDialog } from "@/components/shared/delete-pin-dialog";
 import type { CustomerOption, InitialBill } from "@/components/billing/bill-types";
 import {
@@ -30,11 +31,11 @@ import {
 import type { Shelf, ShelfItem, ShelfUnit } from "@/lib/till/shelf";
 import { formatQuantity } from "@/lib/units";
 import { AddItemDialog } from "./add-item-dialog";
-import { BillPanel, type Phase, type SavedInfo } from "./bill-panel";
+import { BillPanel, JustSavedNotice, type JustSaved, type Phase, type SavedInfo } from "./bill-panel";
 import { LineSheet } from "./line-sheet";
 import { QuickAddCustomer } from "./quick-add-customer";
 import { ShelfPanel } from "./shelf-panel";
-import { TakeMoneyDialog } from "./take-money-dialog";
+import { TakeMoneyDialog, type AfterSave } from "./take-money-dialog";
 
 const SAVE_TIMEOUT_MS = 20000;
 const REFRESH_MIN_GAP_MS = 15000;
@@ -122,6 +123,8 @@ export function TillScreen({
    * before the new lines are applied, so it counts as available). */
   heldBase?: Record<string, number>;
 }) {
+  const router = useRouter();
+
   // ── shelf ─────────────────────────────────────────────────────────────
   const [shelf, setShelf] = useState<Shelf | null>(initialShelf);
   const items = useMemo(() => {
@@ -195,6 +198,13 @@ export function TillScreen({
     setPhase(p);
   }, []);
   const [saved, setSaved] = useState<SavedInfo | null>(null);
+  // "Save only": the till is already empty again; this is the line that says what was saved
+  const [justSaved, setJustSaved] = useState<JustSaved | null>(null);
+  // Which button the cashier pressed (Save & Print / Save only). It stays the same
+  // through the over-stock confirmation, a Retry and a late answer.
+  const afterSaveRef = useRef<AfterSave>("print");
+  // onSaved is memoised, so it reaches the current reset / refresh through this ref
+  const actionsRef = useRef({ startFresh: () => {} });
   const [shortages, setShortages] = useState<StockShortage[] | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -417,9 +427,17 @@ export function TillScreen({
             ? { ...prev, items: prev.items.map((i) => (sold.has(i.id) ? { ...i, stock: i.stock - (sold.get(i.id) ?? 0) } : i)) }
             : prev
         );
+        // what comes next is decided by the button that was pressed
+        if (afterSaveRef.current === "print") {
+          // straight to the print view in auto-print mode; replace, so Back never returns to it
+          router.replace(`/billing/${invoiceId}/print?auto=1&next=new`);
+        } else {
+          setJustSaved({ invoiceId, invoiceNo, changeC: pendingMeta.current.changeC });
+          actionsRef.current.startFresh();
+        }
       }
     },
-    [mode, setPhaseBoth]
+    [mode, setPhaseBoth, router]
   );
 
   const onResult = useCallback(
@@ -437,6 +455,7 @@ export function TillScreen({
     if (inFlight.current) return;
     inFlight.current = true;
     pendingInput.current = input;
+    setJustSaved(null);
     setPhaseBoth("saving");
     setSaveError(null);
     setMoneyOpen(false);
@@ -467,9 +486,10 @@ export function TillScreen({
     }
   }
 
-  function confirmMoney() {
+  function confirmMoney(after: AfterSave) {
     if (summary.issues.length > 0 || calc.issues.length > 0 || phaseRef.current !== "editing") return;
     if (mode === "edit") return void setMoneyOpen(false);
+    afterSaveRef.current = after;
     setMoneyOpen(false);
     if (short.length > 0) return void setShortages(short);
     captureMeta();
@@ -547,6 +567,15 @@ export function TillScreen({
     resetBill();
     void refreshShelf();
   }
+
+  useEffect(() => {
+    actionsRef.current = {
+      startFresh: () => {
+        resetBill();
+        void refreshShelf();
+      },
+    };
+  });
 
   // ── payment dialog plumbing ──────────────────────────────────────────
   const addRow = useCallback(() => {
@@ -634,6 +663,10 @@ export function TillScreen({
           Bill ({lines.length}) {formatRs(fromCents(totalC))}
         </button>
       </div>
+
+      {justSaved && phase === "editing" && (
+        <JustSavedNotice info={justSaved} onDismiss={() => setJustSaved(null)} />
+      )}
 
       <div className="flex min-h-0 flex-1 gap-4 p-3 md:p-4">
         <section className={`${tab === "items" ? "flex" : "hidden"} min-h-0 min-w-0 flex-1 flex-col gap-2 md:flex`}>

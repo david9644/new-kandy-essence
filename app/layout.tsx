@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { KeyboardProvider } from "@/components/keyboard/keyboard-context";
 import { KeyboardPanel } from "@/components/keyboard/keyboard-panel";
+import { START_PAGE_SCRIPT } from "@/lib/start-page";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -39,6 +40,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        {/* installed app opened on the Dashboard / root: go to the new bill, once per window session */}
+        <script dangerouslySetInnerHTML={{ __html: START_PAGE_SCRIPT }} />
+      </head>
       <body className="min-h-full flex flex-col">
         <KeyboardProvider>
           {children}
