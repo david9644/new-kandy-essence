@@ -64,6 +64,26 @@ select {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Touch screens: a tap is a tap at once (no double-tap-to-zoom wait, no zoom by pinch on
+   controls), and a button is never "selected" like text by a long press or a drag. Text
+   boxes keep their normal selection so the cursor and copy / paste still work. */
+button,
+a,
+select,
+label,
+summary,
+[role="button"] {
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+input,
+textarea {
+  touch-action: manipulation;
+}
+
 @media print {
   .print\:hidden {
     display: none !important;

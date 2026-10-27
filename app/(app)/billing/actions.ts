@@ -1,11 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { deleteFailure, type DeletePinCode } from "@/lib/delete-pin";
 import type { Json } from "@/lib/types/database.types";
 import { normalizeShelf, type Shelf } from "@/lib/till/shelf";
+import type { CustomerOption } from "@/components/billing/bill-types";
 import { plainBillError } from "@/lib/billing-errors";
 import { getCurrentProfile } from "@/lib/auth/session";
 import { createItem, createCategory } from "@/app/(app)/items/actions";
@@ -105,7 +107,11 @@ export async function createInvoice(input: BillInput, clientKey: string): Promis
     return { error: "Could not save the bill." };
   }
 
-  revalidateBilling(result.invoice_id);
+  // After the answer has gone out: a revalidatePath inside the action makes Next render the
+  // page the cashier is on (the whole till shelf) into the response and wait for it, which
+  // delays the "saved" answer for nothing: the till moves on to the print view at once.
+  const savedId = result.invoice_id;
+  after(() => revalidateBilling(savedId));
   return { ok: true, invoiceId: result.invoice_id, invoiceNo: result.invoice_no };
 }
 
@@ -144,6 +150,15 @@ export async function loadShelf(): Promise<Shelf | null> {
   const { data, error } = await supabase.rpc("get_billing_shelf");
   if (error || !data) return null;
   return normalizeShelf(data);
+}
+
+// The customer list for the till (same narrow id/code/name read as the page): used when the
+// till opens from memory and has no list yet.
+export async function loadTillCustomers(): Promise<CustomerOption[] | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("search_customers_basic");
+  if (error) return null;
+  return (data ?? []).map((c) => ({ id: c.id, code: c.code, name: c.name }));
 }
 
 // "Delete bill": soft delete, Owner + Delete PIN. Stock is restored and the

@@ -35,20 +35,57 @@ export function KeyboardPanel() {
     return () => window.clearTimeout(timer);
   }, [active]);
 
-  // Outside-tap closes the panel -- anywhere that isn't the panel itself or
-  // the field currently being typed into.
+  // A tap outside the panel (and outside the field being typed into) closes it. It closes
+  // AFTER the tap's own click, not on pointer-down: closing first moves the page (the
+  // bill's big button, a centred dialog) a moment before the click is dispatched, and the
+  // click then lands on whatever slid under the finger. If no click comes (a button that
+  // already acted on pointer-up, see TapButton) a clean tap still closes it shortly after.
+  // Scrolling or dragging outside does not close it.
   useEffect(() => {
     if (!active) return;
 
-    function handlePointerDown(e: PointerEvent) {
-      const target = e.target as Node;
-      if (panelRef.current?.contains(target)) return;
-      if (active?.targetRef.current?.contains(target)) return;
+    let down: { x: number; y: number; outside: boolean; moved: boolean } | null = null;
+    let lastOutside = false;
+    let timer: number | undefined;
+
+    function isOutside(target: Node) {
+      return !(panelRef.current?.contains(target) || active?.targetRef.current?.contains(target));
+    }
+    function onDown(e: PointerEvent) {
+      window.clearTimeout(timer);
+      lastOutside = isOutside(e.target as Node);
+      down = { x: e.clientX, y: e.clientY, outside: lastOutside, moved: false };
+    }
+    function onMove(e: PointerEvent) {
+      if (down && (Math.abs(e.clientX - down.x) > 10 || Math.abs(e.clientY - down.y) > 10)) down.moved = true;
+    }
+    function onUp() {
+      const d = down;
+      down = null;
+      if (d && d.outside && !d.moved) timer = window.setTimeout(close, 600);
+    }
+    function onCancel() {
+      down = null;
+    }
+    function onClick(e: MouseEvent) {
+      if (e.detail === 0 || !lastOutside) return; // a keyboard "click", or one that began inside
+      window.clearTimeout(timer);
       close();
     }
 
-    document.addEventListener("pointerdown", handlePointerDown);
-    return () => document.removeEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("pointerdown", onDown);
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", onUp);
+    document.addEventListener("pointercancel", onCancel);
+    document.addEventListener("click", onClick);
+    return () => {
+      window.clearTimeout(timer);
+      document.removeEventListener("pointerdown", onDown);
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onUp);
+      document.removeEventListener("pointercancel", onCancel);
+      document.removeEventListener("click", onClick);
+    };
   }, [active, close]);
 
   if (!active || typeof document === "undefined") return null;
@@ -62,10 +99,10 @@ export function KeyboardPanel() {
       <div className="mx-auto flex max-w-2xl items-center justify-end pb-2">
         <button
           type="button"
-          onPointerDown={(e) => {
-            e.preventDefault();
-            close();
-          }}
+          // pointer-down keeps the focus in the field; the keyboard goes away on the click, so
+          // nothing underneath the finger can be tapped by mistake
+          onPointerDown={(e) => e.preventDefault()}
+          onClick={close}
           className="flex h-11 items-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground"
         >
           Done

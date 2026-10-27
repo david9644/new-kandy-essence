@@ -200,10 +200,16 @@ export function PrintFrame({
   // double effect (autoDone), not again after a reload or Back/Forward (the
   // sessionStorage memory, and the address stops asking for it). Printing again
   // is only ever the Print button, on purpose.
+  // It starts as soon as the sheet is on screen (fonts ready, two frames drawn), not after
+  // a fixed wait; the timer is only a safety net for a window that is not being drawn.
   useEffect(() => {
     if (!autoPrint) return;
-    const timer = window.setTimeout(() => {
-      if (autoDone.current) return;
+    let cancelled = false;
+    let raf1 = 0;
+    let raf2 = 0;
+
+    function run() {
+      if (cancelled || autoDone.current) return;
       const memory = autoPrintKey ? `nke-autoprint:${autoPrintKey}` : null;
       try {
         if (memory && window.sessionStorage.getItem(memory)) return;
@@ -228,8 +234,23 @@ export function PrintFrame({
       }
       onAutoPrintRef.current?.();
       window.print();
-    }, 700);
-    return () => window.clearTimeout(timer);
+    }
+
+    const fontsReady = document.fonts?.ready ?? Promise.resolve();
+    void fontsReady.then(() => {
+      if (cancelled) return;
+      raf1 = window.requestAnimationFrame(() => {
+        raf2 = window.requestAnimationFrame(run);
+      });
+    });
+    const safety = window.setTimeout(run, 1500);
+
+    return () => {
+      cancelled = true;
+      window.cancelAnimationFrame(raf1);
+      window.cancelAnimationFrame(raf2);
+      window.clearTimeout(safety);
+    };
   }, [autoPrint, autoPrintKey]);
 
   return (
@@ -245,6 +266,7 @@ export function PrintFrame({
           </button>
           <Link
             href={backHref}
+            prefetch={false}
             className="flex h-12 items-center rounded-xl border border-border px-5 text-base font-medium text-foreground active:bg-background"
           >
             {backLabel}
@@ -253,6 +275,7 @@ export function PrintFrame({
             <Link
               href={newBillHref}
               replace
+              prefetch={false}
               className="flex h-12 items-center rounded-xl border border-border px-5 text-base font-medium text-foreground active:bg-background"
             >
               New bill

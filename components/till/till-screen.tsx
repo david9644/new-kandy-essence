@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DeletePinDialog } from "@/components/shared/delete-pin-dialog";
 import type { CustomerOption, InitialBill } from "@/components/billing/bill-types";
 import {
   createInvoice,
   loadShelf,
+  loadTillCustomers,
   updateInvoice,
   type BillInput,
   type SaveBillResult,
@@ -20,6 +21,16 @@ import {
   type DraftLine,
 } from "@/lib/till/bill";
 import { formatRs } from "@/lib/till/format";
+import {
+  FRESH_BILL_HREF,
+  FULL_PREFETCH,
+  clearUnrecordedPrints,
+  onUnrecordedPrint,
+  recallTill,
+  rememberCustomers,
+  rememberShelf,
+  unrecordedPrints,
+} from "@/lib/till/memory";
 import { UNCONFIRMED_MESSAGE, settle } from "@/lib/till/net";
 import {
   buildPayments,
@@ -31,11 +42,21 @@ import {
 import type { Shelf, ShelfItem, ShelfUnit } from "@/lib/till/shelf";
 import { formatQuantity } from "@/lib/units";
 import { AddItemDialog } from "./add-item-dialog";
-import { BillPanel, JustSavedNotice, type JustSaved, type Phase, type SavedInfo } from "./bill-panel";
+import {
+  BillPanel,
+  JustSavedNotice,
+  UnrecordedPrintNotice,
+  type JustSaved,
+  type Phase,
+  type SavedInfo,
+} from "./bill-panel";
 import { LineSheet } from "./line-sheet";
 import { QuickAddCustomer } from "./quick-add-customer";
 import { ShelfPanel } from "./shelf-panel";
 import { TakeMoneyDialog, type AfterSave } from "./take-money-dialog";
+
+// no effect on the server (it only warns); in the browser it runs before the first paint
+const useBrowserLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
 const SAVE_TIMEOUT_MS = 20000;
 const REFRESH_MIN_GAP_MS = 15000;
@@ -104,6 +125,7 @@ function payFromInitial(
 export function TillScreen({
   mode,
   initialShelf,
+  fromMemory = false,
   extraItems,
   customers,
   isOwner,
@@ -113,6 +135,9 @@ export function TillScreen({
 }: {
   mode: "create" | "edit";
   initialShelf: Shelf | null;
+  /** Create only: the page sent no shelf; show the one the browser already holds (the
+   * fresh bill after a print) and refresh it in the background. */
+  fromMemory?: boolean;
   /** Edit only: items on the bill that are no longer on the shelf (deactivated). */
   extraItems?: ShelfItem[];
   customers: CustomerOption[];
@@ -127,6 +152,8 @@ export function TillScreen({
 
   // ── shelf ─────────────────────────────────────────────────────────────
   const [shelf, setShelf] = useState<Shelf | null>(initialShelf);
+  // opened from memory with nothing remembered: the list is being fetched
+  const [shelfLoading, setShelfLoading] = useState(fromMemory && !initialShelf);
   const items = useMemo(() => {
     const base = shelf?.items ?? [];
     if (!extraItems?.length) return base;
@@ -142,6 +169,61 @@ export function TillScreen({
     } catch {
       // keep what we have: a failed refresh must never disturb a bill in progress
     }
+  }, []);
+
+  const [customerList, setCustomerList] = useState<CustomerOption[]>(customers);
+
+  // Opened from memory (the fresh bill after a print): the shelf and customers the till held
+  // before come back at once, before the first paint; the stock numbers are refreshed in the
+  // background. Nothing remembered (e.g. the page was reloaded): fetch them, one round trip.
+  useBrowserLayoutEffect(() => {
+    if (!fromMemory || mode !== "create") return;
+    const memory = recallTill();
+    if (memory.shelf) {
+      setShelf(memory.shelf);
+      setShelfLoading(false);
+    }
+    if (memory.customers) setCustomerList(memory.customers);
+    // the address goes back to the plain one (a reload then loads everything normally)
+    try {
+      window.history.replaceState(window.history.state, "", "/billing/new");
+    } catch {
+      // cosmetic only
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const [freshShelf, freshCustomers] = await Promise.all([
+          loadShelf(),
+          memory.customers ? Promise.resolve(null) : loadTillCustomers(),
+        ]);
+        if (cancelled) return;
+        if (freshShelf) setShelf(freshShelf);
+        if (freshCustomers) setCustomerList(freshCustomers);
+      } catch {
+        // keep what we have
+      }
+      if (!cancelled) setShelfLoading(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // once, when the till opens
+  }, []);
+
+  // keep the browser's copy current: the next bill opens from it
+  useEffect(() => {
+    if (mode === "create") rememberShelf(shelf);
+  }, [mode, shelf]);
+  useEffect(() => {
+    if (mode === "create") rememberCustomers(customerList);
+  }, [mode, customerList]);
+
+  // a print that went out but could not be recorded (reported here, the print view has gone)
+  const [unrecorded, setUnrecorded] = useState<string[]>(() => unrecordedPrints());
+  useEffect(() => {
+    clearUnrecordedPrints();
+    return onUnrecordedPrint((no) => setUnrecorded((prev) => [...prev, no]));
   }, []);
 
   useEffect(() => {
@@ -173,7 +255,6 @@ export function TillScreen({
   );
   const [discountApplied, setDiscountApplied] = useState(discountInput);
   const [customer, setCustomer] = useState<CustomerOption | null>(initial?.customer ?? null);
-  const [customerList, setCustomerList] = useState<CustomerOption[]>(customers);
   const [quickAddQuery, setQuickAddQuery] = useState<string | null>(null);
   // "+ Add item" (Owner only): the typed name to start from, or null when closed
   const [addItemName, setAddItemName] = useState<string | null>(null);
@@ -212,6 +293,15 @@ export function TillScreen({
   const [moneyOpen, setMoneyOpen] = useState(false);
   const [sheetKey, setSheetKey] = useState<string | null>(null);
   const [pinOpen, setPinOpen] = useState(false);
+
+  // While the cashier is taking the money, get the way back ready: the page of the fresh bill
+  // (its address does not depend on the bill) and the print view's code are fetched now, so
+  // after the print the fresh bill appears without a wait.
+  useEffect(() => {
+    if (mode !== "create" || !moneyOpen) return;
+    router.prefetch(FRESH_BILL_HREF, FULL_PREFETCH);
+    void import("@/components/print/invoice-print-view");
+  }, [mode, moneyOpen, router]);
 
   // One key per bill (create) / per edit session: pressing twice, or retrying
   // after a lost answer, can only ever save once.
@@ -623,6 +713,10 @@ export function TillScreen({
       ? `Only ${formatQuantity(sheetItem.stock + (heldBase?.[sheetItem.id] ?? 0))} ${sheetItem.base_unit} left.`
       : null;
 
+  if (!shelf && shelfLoading) {
+    return <p className="m-4 text-center text-sm text-muted">Loading the items...</p>;
+  }
+
   if (!shelf) {
     return (
       <div className="m-4 rounded-2xl border border-danger/40 bg-danger-surface p-6 text-center text-danger">
@@ -663,6 +757,14 @@ export function TillScreen({
           Bill ({lines.length}) {formatRs(fromCents(totalC))}
         </button>
       </div>
+
+      {unrecorded.map((no) => (
+        <UnrecordedPrintNotice
+          key={no}
+          invoiceNo={no}
+          onDismiss={() => setUnrecorded((prev) => prev.filter((x) => x !== no))}
+        />
+      ))}
 
       {justSaved && phase === "editing" && (
         <JustSavedNotice info={justSaved} onDismiss={() => setJustSaved(null)} />

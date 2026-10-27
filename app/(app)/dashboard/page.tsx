@@ -41,7 +41,7 @@ export default async function DashboardPage() {
             <ul className="divide-y divide-border">
               {lowStock.slice(0, 8).map((item) => (
                 <li key={item.id} className="flex items-center justify-between py-2 text-sm">
-                  <Link href={`/stock/${item.id}`} className="font-medium text-primary">
+                  <Link href={`/stock/${item.id}`} className="flex min-h-[44px] items-center font-medium text-primary">
                     {item.name}
                   </Link>
                   <span className="text-danger">
@@ -53,7 +53,7 @@ export default async function DashboardPage() {
             </ul>
           )}
           {lowStock.length > 8 && (
-            <Link href="/reports/low-stock" className="mt-3 block text-sm font-medium text-primary">
+            <Link href="/reports/low-stock" className="mt-1 flex min-h-[44px] items-center text-sm font-medium text-primary">
               View all {lowStock.length} &rarr;
             </Link>
           )}
@@ -75,7 +75,7 @@ export default async function DashboardPage() {
               {nearExpiry.slice(0, 8).map((batch) => (
                 <li key={batch.id} className="flex items-center justify-between py-2 text-sm">
                   <div>
-                    <Link href={`/stock/${batch.item_id}`} className="font-medium text-primary">
+                    <Link href={`/stock/${batch.item_id}`} className="flex min-h-[44px] items-center font-medium text-primary">
                       {batch.item_name}
                     </Link>
                     <p className="text-xs text-muted">{batch.batch_number ?? "No batch #"}</p>
@@ -92,7 +92,7 @@ export default async function DashboardPage() {
             </ul>
           )}
           {nearExpiry.length > 8 && (
-            <Link href="/reports/near-expiry" className="mt-3 block text-sm font-medium text-primary">
+            <Link href="/reports/near-expiry" className="mt-1 flex min-h-[44px] items-center text-sm font-medium text-primary">
               View all {nearExpiry.length} &rarr;
             </Link>
           )}
@@ -118,7 +118,7 @@ export default async function DashboardPage() {
                 {chequesDue.slice(0, 8).map((c) => (
                   <li key={c.id} className="flex items-center justify-between py-2 text-sm">
                     <div>
-                      <Link href="/cheques" className="font-medium text-primary">
+                      <Link href="/cheques" className="flex min-h-[44px] items-center font-medium text-primary">
                         {c.supplier_name}
                       </Link>
                       <p className="text-xs text-muted">
@@ -133,7 +133,7 @@ export default async function DashboardPage() {
               </ul>
             )}
             {chequesDue.length > 8 && (
-              <Link href="/cheques" className="mt-3 block text-sm font-medium text-primary">
+              <Link href="/cheques" className="mt-1 flex min-h-[44px] items-center text-sm font-medium text-primary">
                 View all {chequesDue.length} &rarr;
               </Link>
             )}

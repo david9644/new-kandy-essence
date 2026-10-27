@@ -8,7 +8,7 @@ export function BackButton({ href }: { href: string }) {
   return (
     <Link
       href={href}
-      className="mb-4 inline-flex h-10 items-center gap-1.5 rounded-lg border border-border px-3.5 text-sm font-medium text-foreground active:bg-background print:hidden"
+      className="mb-4 inline-flex min-h-[44px] items-center gap-1.5 rounded-lg border border-border px-3.5 text-sm font-medium text-foreground active:bg-background print:hidden"
     >
       <svg
         viewBox="0 0 20 20"

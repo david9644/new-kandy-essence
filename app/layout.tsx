@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { KeyboardProvider } from "@/components/keyboard/keyboard-context";
 import { KeyboardPanel } from "@/components/keyboard/keyboard-panel";
+import { TouchGuard } from "@/components/shared/touch-guard";
 import { START_PAGE_SCRIPT } from "@/lib/start-page";
 
 const geistSans = Geist({
@@ -46,6 +47,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body className="min-h-full flex flex-col">
         <KeyboardProvider>
+          <TouchGuard />
           {children}
           <KeyboardPanel />
         </KeyboardProvider>

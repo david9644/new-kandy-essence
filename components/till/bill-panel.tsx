@@ -90,7 +90,7 @@ const LineRowView = memo(function LineRowView({
         </span>
       </button>
 
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1.5">
         <button
           type="button"
           disabled={locked}
@@ -105,7 +105,7 @@ const LineRowView = memo(function LineRowView({
           disabled={locked}
           onClick={() => onOpen(line.key)}
           aria-label="Change quantity"
-          className="min-w-[2.5rem] px-1 text-center text-base font-semibold tabular-nums text-foreground"
+          className="min-h-[44px] min-w-[44px] px-1 text-center text-base font-semibold tabular-nums text-foreground"
         >
           {line.quantity || "0"}
         </button>
@@ -155,7 +155,7 @@ export function JustSavedNotice({
           Change to give: {formatRs(fromCents(info.changeC))}
         </span>
       )}
-      <Link href={`/billing/${info.invoiceId}`} className="flex min-h-[44px] items-center font-semibold underline">
+      <Link href={`/billing/${info.invoiceId}`} prefetch={false} className="flex min-h-[44px] items-center font-semibold underline">
         Open or print it
       </Link>
       <button
@@ -163,6 +163,36 @@ export function JustSavedNotice({
         onClick={onDismiss}
         aria-label="Hide this message"
         className="ml-auto flex h-11 w-11 items-center justify-center rounded-lg text-lg text-success active:bg-success/10"
+      >
+        ✕
+      </button>
+    </div>
+  );
+}
+
+/** The bill printed, but the print could not be recorded on it (the print view had already
+ * gone back to the till). Nothing to retry: it only means the next print will not say COPY. */
+export function UnrecordedPrintNotice({
+  invoiceNo,
+  onDismiss,
+}: {
+  invoiceNo: string;
+  onDismiss: () => void;
+}) {
+  return (
+    <div
+      role="alert"
+      data-testid="print-unrecorded"
+      className="mx-3 mt-2 flex shrink-0 items-center gap-3 rounded-2xl border border-warning/40 bg-warning-surface px-3 py-1 text-sm text-warning md:mx-4"
+    >
+      <span className="font-semibold">
+        {invoiceNo} printed, but the print could not be recorded on the bill.
+      </span>
+      <button
+        type="button"
+        onClick={onDismiss}
+        aria-label="Hide this message"
+        className="ml-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-lg active:bg-warning/10"
       >
         ✕
       </button>
@@ -398,6 +428,7 @@ export function BillPanel(p: BillPanelProps) {
           {p.phase === "saved" && p.saved ? (
             <Link
               href={`/billing/${p.saved.invoiceId}/print?auto=1`}
+              prefetch={false}
               className="flex h-12 items-center justify-center rounded-xl border border-border bg-surface px-1 text-center text-sm font-medium text-foreground active:bg-background"
             >
               Print the bill

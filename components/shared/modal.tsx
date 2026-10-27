@@ -26,7 +26,7 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
           <button
             type="button"
             onClick={onClose}
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-border text-foreground active:bg-background"
+            className="flex h-11 w-11 items-center justify-center rounded-lg border border-border text-foreground active:bg-background"
           >
             ✕
           </button>

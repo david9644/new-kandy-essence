@@ -1,11 +1,14 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PrintFrame } from "@/components/print/print-frame";
 import { layoutBill, type PrintInvoice } from "@/lib/print/invoice-layout";
 import type { PrintSettings } from "@/lib/print/settings";
 import { recordInvoicePrint } from "@/app/(app)/billing/actions";
+// The fresh bill after a print opens from what the till already holds in the browser
+// (see lib/till/memory.ts) instead of waiting for the whole shelf from the server again.
+import { FRESH_BILL_HREF as NEW_BILL_FROM_MEMORY, FULL_PREFETCH, flagUnrecordedPrint } from "@/lib/till/memory";
 
 // The bill as it will come out of the printer. Label rule:
 //   printed before            -> COPY   (checkbox starts ticked, untick it if the
@@ -37,6 +40,11 @@ export function InvoicePrintView({
   const recording = useRef(false);
   const returnPending = useRef(false);
 
+  // the way back is fetched while this prints (the till did the same a moment ago)
+  useEffect(() => {
+    if (returnToNewBill) router.prefetch(NEW_BILL_FROM_MEMORY, FULL_PREFETCH);
+  }, [returnToNewBill, router]);
+
   const label = copyChecked ? "COPY" : editCount > 0 ? "REVISED" : null;
   const layout = useMemo(
     () => layoutBill({ ...invoice, label }, settings),
@@ -47,27 +55,36 @@ export function InvoicePrintView({
   // of this page, Back/Forward): only the Print button prints it, as a COPY.
   const autoPrintNow = autoPrint && initialPrintCount === 0;
 
-  const handleAfterPrint = useCallback(async () => {
+  // After the print: the record of the print and the way back to a fresh bill start TOGETHER,
+  // so the cashier is never kept waiting for the record. It is still recorded exactly once
+  // per print (the guard below). A failed record after we have left is reported on the
+  // fresh bill; staying here (the Print button) it shows here, as before.
+  const handleAfterPrint = useCallback(() => {
     if (recording.current) return;
     recording.current = true;
-    const count = await recordInvoicePrint(invoiceId);
-    recording.current = false;
-    if (count === null) {
-      // printed, but not recorded: stay here so nobody misses it (no retry: a retry
-      // could count the same print twice)
-      returnPending.current = false;
-      setRecordFailed(true);
-      return;
+    const leaving = returnPending.current;
+    returnPending.current = false;
+    const done = recordInvoicePrint(invoiceId);
+    if (leaving) router.replace(NEW_BILL_FROM_MEMORY); // replace: Back never lands on this print view
+    void done.then(
+      (count) => {
+        recording.current = false;
+        if (count === null) return failed(leaving);
+        setPrintCount(count);
+        // the next print of this bill is a copy
+        setCopyChecked(true);
+      },
+      () => {
+        recording.current = false;
+        failed(leaving);
+      }
+    );
+    // no retry on failure: a retry could count the same print twice
+    function failed(left: boolean) {
+      if (left) flagUnrecordedPrint(invoice.invoiceNo);
+      else setRecordFailed(true);
     }
-    setPrintCount(count);
-    // the next print of this bill is a copy
-    setCopyChecked(true);
-    if (returnPending.current) {
-      returnPending.current = false;
-      // replace: Back from the new bill never lands on this print view
-      router.replace("/billing/new");
-    }
-  }, [invoiceId, router]);
+  }, [invoiceId, invoice.invoiceNo, router]);
 
   return (
     <PrintFrame
@@ -83,7 +100,7 @@ export function InvoicePrintView({
       onAutoPrint={() => {
         returnPending.current = returnToNewBill;
       }}
-      newBillHref="/billing/new"
+      newBillHref={NEW_BILL_FROM_MEMORY}
       onAfterPrint={handleAfterPrint}
       toolbarExtra={
         <label className="flex h-12 items-center gap-2 rounded-xl border border-border px-4 text-sm font-medium text-foreground">

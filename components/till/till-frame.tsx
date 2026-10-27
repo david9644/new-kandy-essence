@@ -31,7 +31,8 @@ export function TillFrame({
   return (
     <div
       className="flex flex-col overflow-clip bg-background"
-      style={{ height: `calc(100dvh - ${kb}px)` }}
+      // pan only: a finger on the till scrolls the lists but never pinch-zooms the page
+      style={{ height: `calc(100dvh - ${kb}px)`, touchAction: "pan-x pan-y" }}
       onPointerDownCapture={captureMouseOnButton}
     >
       {header}

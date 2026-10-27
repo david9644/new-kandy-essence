@@ -1,7 +1,8 @@
 "use client";
 
-import { memo, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { KeyboardTextInput } from "@/components/keyboard/keyboard-text-input";
+import { useDismissOutside } from "@/components/shared/use-dismiss-outside";
 import { formatQuantity } from "@/lib/units";
 import { formatRs } from "@/lib/till/format";
 import {
@@ -142,6 +143,9 @@ export const ShelfPanel = memo(function ShelfPanel({
   const [query, setQuery] = useState("");
   const [submitted, setSubmitted] = useState<string | null>(null);
   const [suggestOpen, setSuggestOpen] = useState(false);
+  const searchCard = useRef<HTMLDivElement>(null);
+  const closeSuggest = useCallback(() => setSuggestOpen(false), []);
+  useDismissOutside(searchCard, suggestOpen, closeSuggest);
   // How many tiles are drawn: one page, then "Show more" adds another.
   const [shown, setShown] = useState(TILE_PAGE_SIZE);
   // What the suggestions are computed from: the typed text, a moment later,
@@ -216,7 +220,7 @@ export const ShelfPanel = memo(function ShelfPanel({
 
   return (
     <div className={`flex min-h-0 flex-1 flex-col gap-3 ${locked ? "pointer-events-none opacity-60" : ""}`}>
-      <div className="relative z-20 rounded-2xl border border-border bg-surface p-3">
+      <div ref={searchCard} className="relative z-20 rounded-2xl border border-border bg-surface p-3">
         <div className="flex flex-wrap gap-2">
           <KeyboardTextInput
             value={query}
@@ -254,7 +258,6 @@ export const ShelfPanel = memo(function ShelfPanel({
 
         {suggestOpen && onAddItem && suggestions.length === 0 && debounced.trim().length >= 2 && debounced === query && (
           <>
-            <div className="fixed inset-0 z-10" onClick={() => setSuggestOpen(false)} />
             <div className="absolute inset-x-3 top-[calc(100%-4px)] z-20 rounded-xl border border-border bg-surface p-2 shadow-lg">
               <p className="px-2 py-1 text-xs text-muted">No item matches.</p>
               <button
@@ -274,7 +277,6 @@ export const ShelfPanel = memo(function ShelfPanel({
 
         {suggestOpen && suggestions.length > 0 && (
           <>
-            <div className="fixed inset-0 z-10" onClick={() => setSuggestOpen(false)} />
             <div className="absolute inset-x-3 top-[calc(100%-4px)] z-20 max-h-72 overflow-y-auto rounded-xl border border-border bg-surface shadow-lg">
               {suggestions.map((item) => (
                 <button

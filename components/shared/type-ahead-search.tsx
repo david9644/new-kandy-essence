@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { KeyboardTextInput } from "@/components/keyboard/keyboard-text-input";
+import { useDismissOutside } from "./use-dismiss-outside";
 
 interface TypeAheadSearchProps<T> {
   items: T[];
@@ -38,6 +39,9 @@ export function TypeAheadSearch<T>({
 }: TypeAheadSearchProps<T>) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+  const close = useCallback(() => setOpen(false), []);
+  useDismissOutside(box, open, close);
 
   // Distinguishes a tap from a scroll/drag inside the results list. Touch
   // pointers implicitly capture to whichever element received pointerdown,
@@ -89,7 +93,7 @@ export function TypeAheadSearch<T>({
   const trimmedQuery = query.trim();
 
   return (
-    <div className="relative w-full">
+    <div ref={box} className="relative w-full">
       <KeyboardTextInput
         value={query}
         disabled={disabled}
@@ -104,7 +108,6 @@ export function TypeAheadSearch<T>({
       />
       {open && (
         <>
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
           <div className="absolute z-20 mt-1 max-h-80 w-full overflow-y-auto rounded-lg border border-border bg-surface shadow-lg">
             {results.length === 0 && (
               <div className="px-4 py-4 text-sm text-muted">No matches.</div>
