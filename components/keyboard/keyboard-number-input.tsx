@@ -18,7 +18,7 @@ interface KeyboardNumberInputProps extends NativeProps {
   maxLength?: number;
 }
 
-function applyNumericKey(
+export function applyNumericKey(
   current: string,
   key: NumericKey,
   allowDecimal: boolean,

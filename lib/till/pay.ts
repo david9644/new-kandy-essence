@@ -16,6 +16,9 @@ export interface OtherRow {
   bank: string;
   date: string;
   reference: string;
+  /** Cheque / bank transfer only: the amount follows what is still owed (after the cash
+   * typed and the other fixed rows) until the cashier types an amount into it. */
+  amountAuto?: boolean;
 }
 
 export interface PayInput {
@@ -150,4 +153,120 @@ export function quickAmounts(dueC: number): number[] {
     if (rounded > dueC && !out.includes(rounded)) out.push(rounded);
   }
   return out.slice(0, 5).map((c) => fromCents(c));
+}
+
+// ── the dialog's rows: what changes when the cashier picks a method ────────────────
+//
+// Cash is pre-filled with the amount to pay ("auto"). Picking an other method (cheque or
+// bank transfer) clears that pre-filled cash, and the new row takes what is still owed
+// (also "auto"), so the bill balances without typing. Typing cash afterwards makes the
+// row's amount follow (the bill stays balanced, a split). Typing an amount into the row
+// fixes it. Credit is still the explicit "leave the rest unpaid" row: no cash unless typed.
+
+export interface PayState {
+  pay: PayInput;
+  /** The cash box follows what is still owed until the cashier types or taps. */
+  cashAuto: boolean;
+}
+
+const hasCredit = (rows: OtherRow[]) => rows.some((r) => r.method === "credit");
+const hasAutoRow = (rows: OtherRow[]) =>
+  rows.some((r) => r.method !== "credit" && r.amountAuto === true);
+
+export function emptyRow(key: string, method: OtherMethod, today: string): OtherRow {
+  return { key, method, amount: "", number: "", bank: "", date: today, reference: "" };
+}
+
+/** "+ Add cheque, bank transfer or credit": a bank transfer row for the rest. */
+export function addOtherRow(s: PayState, key: string, today: string): PayState {
+  // after an explicit Credit the cashier decides the amount: nothing is taken for them
+  const auto = !hasCredit(s.pay.rows);
+  const row: OtherRow = { ...emptyRow(key, "bank_transfer", today), amountAuto: auto };
+  return {
+    pay: { cash: s.cashAuto && auto ? "" : s.pay.cash, rows: [...s.pay.rows, row] },
+    cashAuto: s.cashAuto && !auto,
+  };
+}
+
+/** Typing or tapping a cash amount (it is then the cashier's, no longer pre-filled). */
+export function setCashText(s: PayState, text: string): PayState {
+  return { pay: { ...s.pay, cash: text }, cashAuto: false };
+}
+
+export function patchOtherRow(s: PayState, key: string, patch: Partial<OtherRow>): PayState {
+  const old = s.pay.rows.find((r) => r.key === key);
+  if (!old) return s;
+  const next: OtherRow = { ...old, ...patch };
+  if (patch.amount !== undefined) next.amountAuto = false;
+
+  const toCredit = next.method === "credit" && old.method !== "credit";
+  const fromCredit = old.method === "credit" && next.method !== "credit";
+  let cash = s.pay.cash;
+  let cashAuto = s.cashAuto;
+
+  if (toCredit) {
+    // "leave the rest on credit": nothing is taken in cash unless typed
+    next.amount = "";
+    next.amountAuto = false;
+    if (!hasCredit(s.pay.rows)) {
+      cash = "";
+      cashAuto = false;
+    }
+  } else if (fromCredit) {
+    // the row stops being the credit remainder and takes what is owed, in cheque / transfer
+    next.amount = "";
+    next.amountAuto = true;
+    if (cashAuto) cash = "";
+    cashAuto = false;
+  }
+  // cheque <-> bank transfer: the amount (typed or following) stays as it is
+  const rows = s.pay.rows.map((r) => (r.key === key ? next : r));
+  return { pay: { cash, rows }, cashAuto };
+}
+
+/** Removing a row: with nothing left that covers the bill, cash is pre-filled again. */
+export function removeOtherRow(s: PayState, key: string): PayState {
+  const gone = s.pay.rows.find((r) => r.key === key);
+  const rows = s.pay.rows.filter((r) => r.key !== key);
+  if (!gone) return s;
+  const restore =
+    rows.length === 0 ||
+    ((gone.method === "credit" || gone.amountAuto === true) && !hasCredit(rows) && !hasAutoRow(rows));
+  return restore ? { pay: { cash: "", rows }, cashAuto: true } : { pay: { ...s.pay, rows }, cashAuto: s.cashAuto };
+}
+
+/** The bill changed: cash follows what is owed again, unless the rest was deliberately left
+ * on credit or an other method is following the amount owed. */
+export function afterBillChange(s: PayState): PayState {
+  if (hasCredit(s.pay.rows) || hasAutoRow(s.pay.rows)) return s;
+  return s.cashAuto ? s : { ...s, cashAuto: true };
+}
+
+/** The payment exactly as the dialog shows it and the bill is saved with: the pre-filled
+ * cash and the following amounts worked out. */
+export function effectivePayment(totalC: number, s: PayState): PayInput {
+  const { rows } = s.pay;
+  const credit = hasCredit(rows);
+  const auto = hasAutoRow(rows) && !credit;
+
+  if (!auto) {
+    if (!s.cashAuto) return s.pay;
+    let nonCashC = 0;
+    for (const r of rows) if (r.method !== "credit") nonCashC += toCents(num(r.amount));
+    const cashC = credit ? 0 : Math.max(0, totalC - nonCashC);
+    return { ...s.pay, cash: cashC > 0 ? String(fromCents(cashC)) : "" };
+  }
+
+  // some rows follow what is owed: whatever the cash and the typed rows leave, in row order
+  let leftC = totalC - Math.max(0, toCents(num(s.cashAuto ? "" : s.pay.cash)));
+  for (const r of rows) {
+    if (r.method !== "credit" && r.amountAuto !== true) leftC -= toCents(num(r.amount));
+  }
+  const out = rows.map((r) => {
+    if (r.method === "credit" || r.amountAuto !== true) return r;
+    const c = Math.max(0, leftC);
+    leftC -= c;
+    return { ...r, amount: c > 0 ? String(fromCents(c)) : "" };
+  });
+  return { cash: s.cashAuto ? "" : s.pay.cash, rows: out };
 }

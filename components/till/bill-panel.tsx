@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { memo } from "react";
+import { memo, useEffect, useState } from "react";
 import { KeyboardNumberInput } from "@/components/keyboard/keyboard-number-input";
+import { QuantityInput } from "./quantity-input";
 import { TapButton } from "./tap-button";
 import { formatRs } from "@/lib/till/format";
 import { fromCents, num } from "@/lib/billing";
@@ -41,6 +42,8 @@ const LineRowView = memo(function LineRowView({
   warn,
   locked,
   onStep,
+  onSetQuantity,
+  onEditing,
   onOpen,
 }: {
   line: DraftLine;
@@ -52,8 +55,17 @@ const LineRowView = memo(function LineRowView({
   warn: boolean;
   locked: boolean;
   onStep: (key: string, delta: number) => void;
+  onSetQuantity: (key: string, text: string) => string | null;
+  onEditing: (editing: boolean) => void;
   onOpen: (key: string) => void;
 }) {
+  // why a typed quantity was not applied; it fades after a few seconds
+  const [qtyMessage, setQtyMessage] = useState<string | null>(null);
+  useEffect(() => {
+    if (!qtyMessage) return;
+    const t = window.setTimeout(() => setQtyMessage(null), 6000);
+    return () => window.clearTimeout(t);
+  }, [qtyMessage]);
   const missing = lineMissingPrice(line);
   const free = lineIsFree(line);
   return (
@@ -100,15 +112,14 @@ const LineRowView = memo(function LineRowView({
         >
           −
         </button>
-        <button
-          type="button"
+        <QuantityInput
+          value={line.quantity}
           disabled={locked}
-          onClick={() => onOpen(line.key)}
-          aria-label="Change quantity"
-          className="min-h-[44px] min-w-[44px] px-1 text-center text-base font-semibold tabular-nums text-foreground"
-        >
-          {line.quantity || "0"}
-        </button>
+          label={name}
+          onCommit={(text) => onSetQuantity(line.key, text)}
+          onMessage={setQtyMessage}
+          onEditing={onEditing}
+        />
         <button
           type="button"
           disabled={locked}
@@ -131,6 +142,12 @@ const LineRowView = memo(function LineRowView({
         )}
         {missing ? "—" : formatRs(fromCents(totalC))}
       </span>
+
+      {qtyMessage && (
+        <p role="alert" data-testid="qty-message" className="col-span-full text-xs font-medium text-danger">
+          {qtyMessage}
+        </p>
+      )}
     </li>
   );
 });
@@ -210,6 +227,7 @@ export interface BillPanelProps {
   calc: BillCalc;
   lowStock: Set<string>;
   onStep: (key: string, delta: number) => void;
+  onSetQuantity: (key: string, text: string) => string | null;
   onOpenLine: (key: string) => void;
   discountInput: string;
   discountApplied: string;
@@ -249,6 +267,10 @@ export function BillPanel(p: BillPanelProps) {
   // While the number pad is up (typing a discount) the three small buttons step
   // aside, so the bill, the total and the big button all still fit above it.
   const padOpen = useKeyboardHeight() > 0;
+  // A quantity is being typed: the discount and totals step aside as well, so the bill's
+  // lines (and the line being edited) keep the room above the pad.
+  const [editingQty, setEditingQty] = useState(false);
+  const typingQty = padOpen && editingQty;
   const locked = p.phase !== "editing";
   const goods = fromCents(p.calc.goodsC);
   const discount = fromCents(Math.max(p.calc.billDiscC, 0));
@@ -340,6 +362,8 @@ export function BillPanel(p: BillPanelProps) {
                 warn={p.lowStock.has(line.itemId)}
                 locked={locked}
                 onStep={p.onStep}
+                onSetQuantity={p.onSetQuantity}
+                onEditing={setEditingQty}
                 onOpen={p.onOpenLine}
               />
             ))}
@@ -348,7 +372,7 @@ export function BillPanel(p: BillPanelProps) {
       </div>
 
       {/* ── discount ── */}
-      <div className={`${CARD} shrink-0 px-4 py-3 ${locked ? "pointer-events-none opacity-60" : ""}`}>
+      <div className={`${CARD} shrink-0 px-4 py-3 ${typingQty ? "hidden" : ""} ${locked ? "pointer-events-none opacity-60" : ""}`}>
         <label className="mb-1.5 block text-sm font-medium text-foreground">
           Discount on the bill (Rs)
         </label>
@@ -373,7 +397,7 @@ export function BillPanel(p: BillPanelProps) {
       </div>
 
       {/* ── totals ── */}
-      <div className={`${CARD} shrink-0 px-4 py-3`}>
+      <div className={`${CARD} shrink-0 px-4 py-3 ${typingQty ? "hidden" : ""}`}>
         <div className="flex items-center justify-between text-sm text-muted">
           <span>Items</span>
           <span className="tabular-nums" data-testid="item-count">

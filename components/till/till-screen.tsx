@@ -33,12 +33,20 @@ import {
 } from "@/lib/till/memory";
 import { UNCONFIRMED_MESSAGE, settle } from "@/lib/till/net";
 import {
+  addOtherRow,
+  afterBillChange,
   buildPayments,
   cashReceivedToStore,
   computePay,
+  effectivePayment,
+  patchOtherRow,
+  removeOtherRow,
+  setCashText,
   type OtherRow,
   type PayInput,
+  type PayState,
 } from "@/lib/till/pay";
+import { parseQuantity } from "@/lib/till/quantity";
 import type { Shelf, ShelfItem, ShelfUnit } from "@/lib/till/shelf";
 import { formatQuantity } from "@/lib/units";
 import { AddItemDialog } from "./add-item-dialog";
@@ -82,7 +90,7 @@ function draftFromInitial(initial?: InitialBill): DraftLine[] {
 function payFromInitial(
   initial: InitialBill | undefined,
   today: string
-): { pay: PayInput; cashAuto: boolean } {
+): PayState {
   if (!initial) return { pay: { cash: "", rows: [] }, cashAuto: true };
   let cashSum = 0;
   let paid = 0;
@@ -264,12 +272,7 @@ export function TillScreen({
   const [date, setDate] = useState(initial?.date ?? today);
 
   const startPay = useMemo(() => payFromInitial(initial, today), [initial, today]);
-  const [pay, setPay] = useState<PayInput>(startPay.pay);
-  const [cashAuto, setCashAuto] = useState(startPay.cashAuto);
-  const payRef = useRef(pay);
-  useEffect(() => {
-    payRef.current = pay;
-  }, [pay]);
+  const [payState, setPayState] = useState<PayState>(startPay);
 
   const [changed, setChanged] = useState(false);
   const [phase, setPhase] = useState<Phase>("editing");
@@ -321,7 +324,7 @@ export function TillScreen({
     setShortages(null);
     setSaveError(null);
     // cash follows what is owed again, unless the rest was deliberately left on credit
-    if (!payRef.current.rows.some((r) => r.method === "credit")) setCashAuto(true);
+    setPayState(afterBillChange);
   }, []);
 
   // ── adding / changing lines ──────────────────────────────────────────
@@ -345,6 +348,23 @@ export function TillScreen({
       if (q <= 0) setLines(current.filter((l) => l.key !== key));
       else setLines(current.map((l) => (l.key === key ? { ...l, quantity: String(q) } : l)));
       billChanged();
+    },
+    [setLines, billChanged]
+  );
+
+  // A quantity typed on the line. A bad value is not applied: the caller shows the message
+  // and the previous quantity stays. Same path as + and -: lines, then billChanged.
+  const onSetQuantity = useCallback(
+    (key: string, text: string): string | null => {
+      const line = linesRef.current.find((l) => l.key === key);
+      if (!line) return null;
+      const parsed = parseQuantity(text);
+      if (!parsed.ok) return parsed.message;
+      if (num(parsed.value) !== num(line.quantity)) {
+        setLines(linesRef.current.map((l) => (l.key === key ? { ...l, quantity: parsed.value } : l)));
+        billChanged();
+      }
+      return null;
     },
     [setLines, billChanged]
   );
@@ -414,14 +434,7 @@ export function TillScreen({
   }, [calc.requested, itemsById, heldBase]);
 
   const totalC = Math.max(calc.totalC, 0);
-  const effectivePay = useMemo<PayInput>(() => {
-    if (!cashAuto) return pay;
-    const hasCredit = pay.rows.some((r) => r.method === "credit");
-    let nonCashC = 0;
-    for (const r of pay.rows) if (r.method !== "credit") nonCashC += Math.round(num(r.amount) * 100);
-    const cashC = hasCredit ? 0 : Math.max(0, totalC - nonCashC);
-    return { ...pay, cash: cashC > 0 ? String(fromCents(cashC)) : "" };
-  }, [pay, cashAuto, totalC]);
+  const effectivePay = useMemo<PayInput>(() => effectivePayment(totalC, payState), [payState, totalC]);
   const summary = useMemo(
     () => computePay(totalC, effectivePay, customer !== null),
     [totalC, effectivePay, customer]
@@ -633,8 +646,7 @@ export function TillScreen({
     setCustomer(null);
     setNotes("");
     setDate(today);
-    setPay({ cash: "", rows: [] });
-    setCashAuto(true);
+    setPayState({ pay: { cash: "", rows: [] }, cashAuto: true });
     setChanged(false);
     setShortages(null);
     setSaveError(null);
@@ -668,40 +680,12 @@ export function TillScreen({
   });
 
   // ── payment dialog plumbing ──────────────────────────────────────────
-  const addRow = useCallback(() => {
-    setPay((p) => ({
-      ...p,
-      rows: [
-        ...p.rows,
-        { key: uuid(), method: "bank_transfer", amount: "", number: "", bank: "", date: today, reference: "" },
-      ],
-    }));
-  }, [today]);
-
-  const patchRow = useCallback((key: string, patch: Partial<OtherRow>) => {
-    setPay((p) => {
-      const rows = p.rows.map((r) => (r.key === key ? { ...r, ...patch } : r));
-      const hadCredit = p.rows.some((r) => r.method === "credit");
-      const hasCredit = rows.some((r) => r.method === "credit");
-      if (!hadCredit && hasCredit) {
-        // "leave the rest on credit": nothing is taken in cash unless typed
-        setCashAuto(false);
-        return { cash: "", rows };
-      }
-      if (hadCredit && !hasCredit) setCashAuto(true);
-      return { ...p, rows };
-    });
-  }, []);
-
-  const removeRow = useCallback((key: string) => {
-    setPay((p) => {
-      const rows = p.rows.filter((r) => r.key !== key);
-      if (p.rows.some((r) => r.method === "credit") && !rows.some((r) => r.method === "credit")) {
-        setCashAuto(true);
-      }
-      return { ...p, rows };
-    });
-  }, []);
+  const addRow = useCallback(() => setPayState((st) => addOtherRow(st, uuid(), today)), [today]);
+  const patchRow = useCallback(
+    (key: string, patch: Partial<OtherRow>) => setPayState((st) => patchOtherRow(st, key, patch)),
+    []
+  );
+  const removeRow = useCallback((key: string) => setPayState((st) => removeOtherRow(st, key)), []);
 
   // ── rendering helpers ────────────────────────────────────────────────
   const nameOf = (line: DraftLine) => itemsById.get(line.itemId)?.name ?? "Unknown item";
@@ -801,6 +785,7 @@ export function TillScreen({
             calc={calc}
             lowStock={lowStock}
             onStep={onStep}
+            onSetQuantity={onSetQuantity}
             onOpenLine={setSheetKey}
             discountInput={discountInput}
             discountApplied={discountApplied}
@@ -842,15 +827,9 @@ export function TillScreen({
         totalC={totalC}
         pay={effectivePay}
         summary={summary}
-        cashAuto={cashAuto}
-        onCash={(text) => {
-          setCashAuto(false);
-          setPay((p) => ({ ...p, cash: text }));
-        }}
-        onQuick={(amount) => {
-          setCashAuto(false);
-          setPay((p) => ({ ...p, cash: String(amount) }));
-        }}
+        cashAuto={payState.cashAuto}
+        onCash={(text) => setPayState((st) => setCashText(st, text))}
+        onQuick={(amount) => setPayState((st) => setCashText(st, String(amount)))}
         onAddRow={addRow}
         onPatchRow={patchRow}
         onRemoveRow={removeRow}
