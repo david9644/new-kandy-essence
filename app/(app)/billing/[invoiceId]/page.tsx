@@ -1,6 +1,7 @@
 import { lineAmounts } from "@/lib/line-price";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { phonesText } from "@/lib/print/header";
 import { requireProfile } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { formatCurrency, formatQuantity } from "@/lib/units";
@@ -43,14 +44,14 @@ export default async function InvoiceDetailPage({
         .order("created_at"),
       supabase
         .from("app_settings")
-        .select("business_name, business_address, business_phone1, business_phone2")
+        .select("business_name, business_tagline, business_address, business_phones")
         .eq("id", true)
         .maybeSingle(),
     ]);
 
   if (!invoice) notFound();
 
-  const phones = [settings?.business_phone1, settings?.business_phone2].filter(Boolean).join(" / ");
+  const phones = phonesText(settings?.business_phones);
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -107,11 +108,12 @@ export default async function InvoiceDetailPage({
         </div>
       </div>
 
-      {(settings?.business_name || settings?.business_address || phones) && (
+      {(settings?.business_name || settings?.business_tagline || settings?.business_address || phones) && (
         <div className="mb-4 rounded-xl border border-border bg-surface px-4 py-3 text-sm">
           {settings?.business_name && (
             <p className="font-semibold text-foreground">{settings.business_name}</p>
           )}
+          {settings?.business_tagline && <p className="text-muted">{settings.business_tagline}</p>}
           {settings?.business_address && (
             <p className="whitespace-pre-line text-muted">{settings.business_address}</p>
           )}

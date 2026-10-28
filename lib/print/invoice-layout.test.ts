@@ -77,16 +77,16 @@ test("default grid is 49 x 30 (right margin +1 cm) and the page count grows with
 test("page 1 has the full header, continuation pages the compact one", () => {
   const pages = layoutInvoice(invoiceWith(50), GRID);
   const first = pages[0].join("\n");
-  assert.ok(first.includes("NEW KANDY ESSENCE"));
-  assert.ok(first.includes("Sample address line"));
-  assert.ok(first.includes("081 0000000 / 077 0000000"));
+  assert.ok(first.includes("New Kandy Essence Suppliers"));
+  assert.ok(first.includes("16, Wadugodapitiya Street, Kandy"));
+  assert.ok(first.includes("Tel: 081-4550561 / 0779278100"));
   assert.ok(first.includes("Customer: Sample Customer (CUS-0001)"));
   assert.ok(first.includes("Phone: 077 1234567"));
   assert.ok(first.includes("Cashier: Test"));
   const second = pages[1].join("\n");
-  assert.ok(second.includes("NEW KANDY ESSENCE"));
+  assert.ok(second.includes("New Kandy Essence Suppliers"));
   assert.ok(second.includes("Bill INV-TEST"));
-  assert.ok(!second.includes("Sample address line"), "no address on continuation pages");
+  assert.ok(!second.includes("Wadugodapitiya"), "no address on continuation pages");
   assert.ok(second.includes("Item") && second.includes("Amount"), "column header repeated");
 });
 

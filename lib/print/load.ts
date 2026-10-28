@@ -1,8 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/types/database.types";
-import type { PrintBusiness } from "@/lib/print/invoice-layout";
+import type { PrintBusiness } from "@/lib/print/header";
 import {
   DEFAULT_PRINT_SETTINGS,
+  businessFromSettings,
   validatePrintSettings,
   type PrintSettings,
 } from "@/lib/print/settings";
@@ -19,7 +20,7 @@ export async function loadPrintConfig(supabase: SupabaseClient<Database>): Promi
   const { data } = await supabase
     .from("app_settings")
     .select(
-      "business_name, business_address, business_phone1, business_phone2, print_page_width_in, print_page_height_in, print_margin_top_in, print_margin_bottom_in, print_margin_left_in, print_margin_right_in, print_cpi, print_lpi, print_footer, print_continuous, print_max_sheets, print_strike_mode, print_cashier_text"
+      "business_name, business_tagline, business_address, business_phones, print_page_width_in, print_page_height_in, print_margin_top_in, print_margin_bottom_in, print_margin_left_in, print_margin_right_in, print_cpi, print_lpi, print_footer, print_continuous, print_max_sheets, print_strike_mode, print_cashier_text"
     )
     .eq("id", true)
     .maybeSingle();
@@ -42,16 +43,16 @@ export async function loadPrintConfig(supabase: SupabaseClient<Database>): Promi
           : "strike") as PrintSettings["strikeMode"],
         // an EMPTY text is kept as it is (= print the stored user name)
         cashierText: data.print_cashier_text ?? DEFAULT_PRINT_SETTINGS.cashierText,
+        businessName: data.business_name?.trim() || DEFAULT_PRINT_SETTINGS.businessName,
+        businessTagline: data.business_tagline ?? "",
+        businessAddress: data.business_address ?? "",
+        businessPhones: data.business_phones ?? "",
       }
     : DEFAULT_PRINT_SETTINGS;
 
+  const checked = validatePrintSettings(settings) === null ? settings : DEFAULT_PRINT_SETTINGS;
   return {
-    business: {
-      name: data?.business_name?.trim() || "New Kandy Essence",
-      address: data?.business_address ?? "",
-      phone1: data?.business_phone1 ?? "",
-      phone2: data?.business_phone2 ?? "",
-    },
-    settings: validatePrintSettings(settings) === null ? settings : DEFAULT_PRINT_SETTINGS,
+    business: businessFromSettings(checked),
+    settings: checked,
   };
 }

@@ -3,7 +3,6 @@ import { createClient } from "@/lib/supabase/server";
 import { AddNameForm } from "@/components/settings/add-name-form";
 import { DailyChequeLimitForm } from "@/components/settings/daily-cheque-limit-form";
 import { DeletePinForm } from "@/components/settings/delete-pin-form";
-import { BusinessDetailsForm } from "@/components/settings/business-details-form";
 import { PrintingSettingsForm } from "@/components/settings/printing-settings-form";
 import { loadPrintConfig } from "@/lib/print/load";
 import { ActiveToggleButton } from "@/components/items/active-toggle-button";
@@ -14,7 +13,6 @@ import {
   updateAppSettings,
   setDeletePin,
   resetDeletePin,
-  updateBusinessDetails,
   updatePrintSettings,
 } from "@/app/(app)/settings/actions";
 
@@ -33,7 +31,7 @@ export default async function SettingsPage() {
       supabase.from("bank_accounts").select("id, name, active").order("name"),
       supabase
         .from("app_settings")
-        .select("daily_cheque_limit, business_name, business_address, business_phone1, business_phone2")
+        .select("daily_cheque_limit")
         .eq("id", true)
         .maybeSingle(),
       supabase.rpc("has_delete_pin"),
@@ -58,25 +56,10 @@ export default async function SettingsPage() {
       </section>
 
       <section>
-        <h2 className="mb-3 text-lg font-medium text-foreground">Business Details</h2>
-        <p className="mb-3 text-sm text-muted">
-          Shown in the header of every bill: business name, address and up to two phone numbers.
-        </p>
-        <BusinessDetailsForm
-          initial={{
-            name: appSettings?.business_name ?? "",
-            address: appSettings?.business_address ?? "",
-            phone1: appSettings?.business_phone1 ?? "",
-            phone2: appSettings?.business_phone2 ?? "",
-          }}
-          onSubmit={updateBusinessDetails}
-        />
-      </section>
-
-      <section>
         <h2 className="mb-3 text-lg font-medium text-foreground">Printing</h2>
         <p className="mb-3 text-sm text-muted">
-          How a bill is laid out on the dot-matrix printer&rsquo;s tractor paper. The numbers are
+          The bill header (business name, tagline, address, phones) and how a bill is laid out on
+          the dot-matrix printer&rsquo;s tractor paper. The numbers are
           only a starting point &mdash; use the test prints to see what the printer really does and
           adjust.
         </p>

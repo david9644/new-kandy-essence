@@ -18,6 +18,8 @@ export type Database = {
         Row: {
           business_address: string | null
           business_name: string | null
+          business_phones: string
+          business_tagline: string
           business_phone1: string | null
           business_phone2: string | null
           daily_cheque_limit: number
@@ -39,6 +41,8 @@ export type Database = {
         Insert: {
           business_address?: string | null
           business_name?: string | null
+          business_phones?: string
+          business_tagline?: string
           business_phone1?: string | null
           business_phone2?: string | null
           daily_cheque_limit?: number
@@ -60,6 +64,8 @@ export type Database = {
         Update: {
           business_address?: string | null
           business_name?: string | null
+          business_phones?: string
+          business_tagline?: string
           business_phone1?: string | null
           business_phone2?: string | null
           daily_cheque_limit?: number

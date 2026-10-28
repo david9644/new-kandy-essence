@@ -11,8 +11,11 @@
 // grids); no page is ever empty.
 
 import { formatQuantity } from "../units";
+import { businessHeaderLines, type PrintBusiness } from "./header";
 import { lineAmounts } from "../line-price";
 import {
+  DEFAULT_PRINT_SETTINGS,
+  businessFromSettings,
   cashierShown,
   deriveGrid,
   printedHeight,
@@ -24,12 +27,7 @@ import {
 
 export type PrintLabel = "COPY" | "REVISED" | null;
 
-export interface PrintBusiness {
-  name: string;
-  address: string;
-  phone1: string;
-  phone2: string;
-}
+export type { PrintBusiness };
 
 export interface PrintInvoiceLine {
   itemName: string;
@@ -292,16 +290,7 @@ function itemBlock(l: PrintInvoiceLine, c: Columns, cols: number, mode: StrikeMo
 // ── headers ─────────────────────────────────────────────────────────────
 
 function businessLines(b: PrintBusiness, cols: number, full: boolean): string[] {
-  const out: string[] = [];
-  if (clean(b.name)) out.push(...centered(b.name, cols));
-  if (full) {
-    for (const part of (b.address ?? "").split(/\r?\n/)) {
-      if (clean(part)) out.push(...centered(part, cols));
-    }
-    const phones = [b.phone1, b.phone2].map(clean).filter(Boolean).join(" / ");
-    if (phones) out.push(...centered(phones, cols));
-  }
-  return out;
+  return businessHeaderLines(b, cols, full);
 }
 
 function pageText(page: number, count: number): string {
@@ -674,12 +663,7 @@ export function sampleInvoice(lineCount: number): PrintInvoice {
   const cheque = Math.round((total / 4) * 100) / 100;
   const credit = Math.round((total - cash - cheque) * 100) / 100;
   return {
-    business: {
-      name: "NEW KANDY ESSENCE",
-      address: "Sample address line, Kandy",
-      phone1: "081 0000000",
-      phone2: "077 0000000",
-    },
+    business: businessFromSettings(DEFAULT_PRINT_SETTINGS),
     invoiceNo: "INV-TEST",
     date: "2026-01-01",
     customerName: "Sample Customer",

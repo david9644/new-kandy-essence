@@ -79,7 +79,7 @@ for (const n of [1, 10, 20, 35, 50, 120]) {
     assert.ok(page.length / S.lpi + S.marginTopIn + S.marginBottomIn <= expected.heightIn + 1e-9, "never taller than the paper");
 
     // one header, no paging text
-    assert.equal((text.match(/NEW KANDY ESSENCE/g) ?? []).length, 1, "header printed once");
+    assert.equal((text.match(/New Kandy Essence Suppliers/g) ?? []).length, 1, "header printed once");
     assert.ok(!/Page\s+\d+\s+of/.test(text), "no Page x of y");
     for (let i = 1; i <= n; i++) assert.ok(new RegExp(`Item ${i}(?!\\d)`).test(text), `item ${i} present`);
 
@@ -118,7 +118,7 @@ test("exceeding the maximum falls back to pieces: header repeated, Page x of y, 
   r.pages.forEach((p, i) => {
     const t = p.join("\n");
     assert.match(t, new RegExp(`Page\\s+${i + 1}\\s+of\\s+${r.pages.length}`), `piece ${i + 1} numbered`);
-    assert.ok(t.includes("NEW KANDY ESSENCE"), `piece ${i + 1} has the header`);
+    assert.ok(t.includes("New Kandy Essence Suppliers"), `piece ${i + 1} has the header`);
     assert.ok(r.pageHeightsIn[i] <= maxH + 1e-9, "never longer than the maximum");
     assert.equal(r.pageHeightsIn[i] % SHEET, 0, "whole sheets");
     if (i < r.pages.length - 1) {

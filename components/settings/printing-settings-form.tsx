@@ -7,9 +7,19 @@ import { KeyboardNumberInput } from "@/components/keyboard/keyboard-number-input
 import { KeyboardTextInput } from "@/components/keyboard/keyboard-text-input";
 import { layoutBill, sampleInvoice } from "@/lib/print/invoice-layout";
 import {
+  BUSINESS_ADDRESS_MAX,
+  BUSINESS_NAME_MAX,
+  BUSINESS_PHONES_MAX,
+  BUSINESS_TAGLINE_MAX,
+  businessHeaderLines,
+} from "@/lib/print/header";
+import {
   CASHIER_TEXT_MAX,
   DEFAULT_PRINT_SETTINGS,
+  MIN_COLS,
+  businessFromSettings,
   deriveGrid,
+  headerProblems,
   settingsToQuery,
   validatePrintSettings,
   type PrintSettings,
@@ -19,12 +29,26 @@ import {
 const NUM =
   "w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-right text-sm tabular-nums text-foreground focus:border-primary focus:outline-none";
 
-type NumKey = Exclude<keyof PrintSettings, "footer" | "continuous" | "strikeMode" | "cashierText">;
+type NumKey = Exclude<
+  keyof PrintSettings,
+  | "footer"
+  | "continuous"
+  | "strikeMode"
+  | "cashierText"
+  | "businessName"
+  | "businessTagline"
+  | "businessAddress"
+  | "businessPhones"
+>;
 type Draft = Record<NumKey, string> & {
   footer: string;
   continuous: boolean;
   strikeMode: StrikeMode;
   cashierText: string;
+  businessName: string;
+  businessTagline: string;
+  businessAddress: string;
+  businessPhones: string;
 };
 
 function toDraft(s: PrintSettings): Draft {
@@ -42,6 +66,10 @@ function toDraft(s: PrintSettings): Draft {
     maxSheets: String(s.maxSheets),
     strikeMode: s.strikeMode,
     cashierText: s.cashierText,
+    businessName: s.businessName,
+    businessTagline: s.businessTagline,
+    businessAddress: s.businessAddress,
+    businessPhones: s.businessPhones,
   };
 }
 
@@ -61,8 +89,15 @@ function fromDraft(d: Draft): PrintSettings {
     maxSheets: n(d.maxSheets),
     strikeMode: d.strikeMode,
     cashierText: d.cashierText,
+    businessName: d.businessName,
+    businessTagline: d.businessTagline,
+    businessAddress: d.businessAddress,
+    businessPhones: d.businessPhones,
   };
 }
+
+const TEXT_FIELD =
+  "w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none";
 
 export function PrintingSettingsForm({
   initial,
@@ -81,6 +116,10 @@ export function PrintingSettingsForm({
   const problem = validatePrintSettings(settings);
   const grid = problem ? null : deriveGrid(settings);
   const query = settingsToQuery(settings);
+  const headerErrors = headerProblems(settings);
+  // The header exactly as the printer gets it (the same code as the real bill), at this width.
+  const previewCols = Math.max(MIN_COLS, deriveGrid(settings).cols);
+  const headerPreview = businessHeaderLines(businessFromSettings(settings), previewCols, true);
 
   // What a typical 20-line and 50-line bill comes out as with these values.
   const typical = problem
@@ -111,6 +150,27 @@ export function PrintingSettingsForm({
     );
   }
 
+  function headerField(label: string, key: keyof typeof headerErrors, max: number, hint?: string) {
+    const err = headerErrors[key];
+    return (
+      <div className="mb-3">
+        <label className="mb-1 block text-xs font-medium text-muted">
+          {label} <span className="font-normal">(up to {max} characters)</span>
+        </label>
+        <KeyboardTextInput
+          value={draft[key]}
+          onChange={(v) => set(key, v)}
+          className={`${TEXT_FIELD} ${err ? "border-danger" : ""}`}
+        />
+        {err ? (
+          <p className="mt-0.5 text-[11px] text-danger">{err}</p>
+        ) : (
+          hint && <p className="mt-0.5 text-[11px] text-muted">{hint}</p>
+        )}
+      </div>
+    );
+  }
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -131,6 +191,34 @@ export function PrintingSettingsForm({
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <div className="rounded-lg border border-border p-3">
+        <p className="mb-2 text-sm font-medium text-foreground">Bill header</p>
+        {headerField("Business name", "businessName", BUSINESS_NAME_MAX)}
+        {headerField(
+          "Tagline (printed under the name)",
+          "businessTagline",
+          BUSINESS_TAGLINE_MAX,
+          "Long text is split over two or more lines."
+        )}
+        {headerField("Address", "businessAddress", BUSINESS_ADDRESS_MAX)}
+        {headerField(
+          "Phone numbers",
+          "businessPhones",
+          BUSINESS_PHONES_MAX,
+          "Printed after “Tel: ”, so type only the numbers."
+        )}
+        <p className="mb-1 mt-3 text-xs font-medium text-muted">
+          Preview of the printed header ({previewCols} characters wide)
+        </p>
+        <pre className="overflow-x-auto rounded-lg border border-border bg-background p-2 font-mono text-xs leading-tight text-foreground">
+          {headerPreview.map((l) => l.padEnd(previewCols, " ")).join("\n")}
+        </pre>
+        <p className="mt-1 text-[11px] text-muted">
+          The dot-matrix printer can print English letters, numbers and ordinary punctuation
+          only (no Sinhala or Tamil letters, accents or curly quotes).
+        </p>
+      </div>
+
       <div className="grid grid-cols-2 gap-3">
         {field("Page width (in)", "pageWidthIn", "Including the tractor-hole strips")}
         {field("Page height (in)", "pageHeightIn")}

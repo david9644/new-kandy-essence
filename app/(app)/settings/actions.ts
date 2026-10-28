@@ -7,6 +7,7 @@ import { getCurrentProfile } from "@/lib/auth/session";
 import { isValidPinFormat, verifyPin } from "@/lib/auth/pin";
 import { clearAttempts, isThrottled, recordFailedAttempt } from "@/lib/auth/rate-limit";
 import { deleteFailure } from "@/lib/delete-pin";
+import { squash } from "@/lib/print/header";
 import { validatePrintSettings, type PrintSettings } from "@/lib/print/settings";
 
 export async function createBankAccount(name: string) {
@@ -120,36 +121,6 @@ export async function resetDeletePin(loginPin: string, newPin: string) {
   return { ok: true };
 }
 
-// Business details printed in the bill header (owner only -- enforced by the
-// app_settings_update policy; we also confirm a row was actually updated).
-export async function updateBusinessDetails(input: {
-  name: string;
-  address: string;
-  phone1: string;
-  phone2: string;
-}) {
-  const owner = await getOwnerProfile();
-  if (!owner) return { error: "Only the owner can change the business details." };
-
-  const clean = (v: string) => v.trim() || null;
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("app_settings")
-    .update({
-      business_name: clean(input.name),
-      business_address: clean(input.address),
-      business_phone1: clean(input.phone1),
-      business_phone2: clean(input.phone2),
-    })
-    .eq("id", true)
-    .select("id");
-  if (error) return { error: error.message };
-  if (!data || data.length === 0) return { error: "Could not save the business details." };
-  revalidatePath("/settings");
-  revalidatePath("/billing");
-  return { ok: true };
-}
-
 // Printer grid for the bill printer (owner only; also re-validated here
 // because the browser form is not trusted -- the database has matching CHECKs).
 export async function updatePrintSettings(input: PrintSettings) {
@@ -175,6 +146,11 @@ export async function updatePrintSettings(input: PrintSettings) {
       print_max_sheets: input.maxSheets,
       print_strike_mode: input.strikeMode,
       print_cashier_text: input.cashierText.replace(/\s+/g, " ").trim(),
+      // the bill header (validated above: plain printable ASCII, within the lengths)
+      business_name: squash(input.businessName),
+      business_tagline: squash(input.businessTagline),
+      business_address: squash(input.businessAddress),
+      business_phones: squash(input.businessPhones),
     })
     .eq("id", true)
     .select("id");

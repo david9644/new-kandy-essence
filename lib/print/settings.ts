@@ -3,6 +3,16 @@
 // margins, characters-per-inch and lines-per-inch all come from here (stored
 // in app_settings and tunable from Settings -> Printing with a test print).
 
+import {
+  BUSINESS_ADDRESS_MAX,
+  BUSINESS_NAME_MAX,
+  BUSINESS_PHONES_MAX,
+  BUSINESS_TAGLINE_MAX,
+  squash,
+  unprintableChars,
+  type PrintBusiness,
+} from "./header";
+
 /** How a discounted line's NORMAL amount is printed:
  *  strike = crossed out (the default), text = written "(was 360.00)", off = not shown. */
 export type StrikeMode = "strike" | "text" | "off";
@@ -30,6 +40,11 @@ export interface PrintSettings {
   /** Text printed after "Cashier:" on every bill. Empty = show the stored user
    * name instead (what the bill did before this setting existed). */
   cashierText: string;
+  /** The bill header (see lib/print/header.ts): name, tagline, address, phones. */
+  businessName: string;
+  businessTagline: string;
+  businessAddress: string;
+  businessPhones: string;
 }
 
 export interface PrintGrid {
@@ -58,7 +73,56 @@ export const DEFAULT_PRINT_SETTINGS: PrintSettings = {
   maxSheets: 6,
   strikeMode: "strike",
   cashierText: "New Kandy Essence",
+  businessName: "New Kandy Essence Suppliers",
+  businessTagline: "Dealers in All Kind of Essence, Cake Ingredients, Grocery & Scent etc...",
+  businessAddress: "16, Wadugodapitiya Street, Kandy",
+  businessPhones: "081-4550561 / 0779278100",
 };
+
+/** The header settings as the bill header. */
+export function businessFromSettings(s: PrintSettings): PrintBusiness {
+  return {
+    name: s.businessName,
+    tagline: s.businessTagline,
+    address: s.businessAddress,
+    phones: s.businessPhones,
+  };
+}
+
+export type HeaderField = "businessName" | "businessTagline" | "businessAddress" | "businessPhones";
+
+const HEADER_FIELDS: readonly { key: HeaderField; label: string; max: number; required: boolean }[] = [
+  { key: "businessName", label: "Business name", max: BUSINESS_NAME_MAX, required: true },
+  { key: "businessTagline", label: "Tagline", max: BUSINESS_TAGLINE_MAX, required: false },
+  { key: "businessAddress", label: "Address", max: BUSINESS_ADDRESS_MAX, required: false },
+  { key: "businessPhones", label: "Phone numbers", max: BUSINESS_PHONES_MAX, required: false },
+];
+
+/** Problems with the four header fields, by field (empty object = all fine). The dot-matrix
+ * printer prints plain English text only, so anything else (Sinhala or Tamil letters, accents,
+ * curly quotes...) is refused with the reason. */
+export function headerProblems(s: PrintSettings): Partial<Record<HeaderField, string>> {
+  const out: Partial<Record<HeaderField, string>> = {};
+  for (const f of HEADER_FIELDS) {
+    const value = s[f.key];
+    if (/[\r\n]/.test(value)) {
+      out[f.key] = `${f.label} must be a single line.`;
+      continue;
+    }
+    const bad = unprintableChars(value);
+    if (bad.length > 0) {
+      out[f.key] =
+        `${f.label}: the printer cannot print ${bad.slice(0, 5).join(" ")}` +
+        " (Sinhala or Tamil letters, accents and fancy quotes are not possible on the dot-matrix" +
+        " printer). Use English letters, numbers and ordinary punctuation only.";
+      continue;
+    }
+    const text = squash(value);
+    if (f.required && text === "") out[f.key] = `${f.label} is required.`;
+    else if (text.length > f.max) out[f.key] = `${f.label} can be at most ${f.max} characters.`;
+  }
+  return out;
+}
 
 /** Longest "Cashier:" text. "Cashier: " plus 30 characters is 39 of the 49
  * characters on a line, so it always fits (the date moves to its own line when
@@ -140,6 +204,9 @@ export function validatePrintSettings(s: PrintSettings): string | null {
     return `The name shown after Cashier can be at most ${CASHIER_TEXT_MAX} characters.`;
   }
   if (/[\r\n]/.test(s.cashierText)) return "The name shown after Cashier must be a single line.";
+  const header = headerProblems(s);
+  const firstHeader = HEADER_FIELDS.map((f) => header[f.key]).find(Boolean);
+  if (firstHeader) return firstHeader;
   if (s.footer.length > 80) return "The footer line can be at most 80 characters.";
   if (/[\r\n]/.test(s.footer)) return "The footer must be a single line.";
 
@@ -180,6 +247,11 @@ export function applyOverrides(
   const cashier = Array.isArray(cashierRaw) ? cashierRaw[0] : cashierRaw;
   const footerRaw = params.footer;
   const footer = Array.isArray(footerRaw) ? footerRaw[0] : footerRaw;
+  const text = (key: string, fallback: string): string => {
+    const raw = params[key];
+    const v = Array.isArray(raw) ? raw[0] : raw;
+    return v !== undefined ? v : fallback;
+  };
   return {
     pageWidthIn: num("w", base.pageWidthIn),
     pageHeightIn: num("h", base.pageHeightIn),
@@ -194,6 +266,10 @@ export function applyOverrides(
     maxSheets: num("maxs", base.maxSheets),
     strikeMode: strikeParam(params.sm, base.strikeMode),
     cashierText: cashier !== undefined ? cashier : base.cashierText,
+    businessName: text("bn", base.businessName),
+    businessTagline: text("bt", base.businessTagline),
+    businessAddress: text("ba", base.businessAddress),
+    businessPhones: text("bp", base.businessPhones),
   };
 }
 
@@ -212,6 +288,10 @@ export function settingsToQuery(s: PrintSettings): string {
     maxs: String(s.maxSheets),
     sm: s.strikeMode,
     cashier: s.cashierText,
+    bn: s.businessName,
+    bt: s.businessTagline,
+    ba: s.businessAddress,
+    bp: s.businessPhones,
   });
   return p.toString();
 }
